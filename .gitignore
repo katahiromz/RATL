@@ -28,3 +28,4 @@ TMP1.$$$
 build
 ipch
 x64
+lib*.a
