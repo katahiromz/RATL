@@ -12,7 +12,9 @@ project(RATL CXX)
 
 ##############################################################################
 
+include_directories(atl)
+
 # libratl.a
-add_library(ratl STATIC atlcore.cpp atlbase.cpp)
+add_library(ratl STATIC atl/atlcore.cpp atl/atlbase.cpp)
 
 ##############################################################################

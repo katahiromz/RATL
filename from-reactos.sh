@@ -1,3 +1,3 @@
 #!/bin/bash
-cp ../reactos/sdk/lib/atl/*.h .
-cp ../reactos/sdk/lib/atl/*.cpp .
+cp ../reactos/sdk/lib/atl/*.h atl
+cp ../reactos/sdk/lib/atl/*.cpp atl
