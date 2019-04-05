@@ -13,6 +13,6 @@ project(RATL CXX)
 ##############################################################################
 
 # libratl.a
-add_library(RATL STATIC atlcore.cpp atlbase.cpp)
+add_library(ratl STATIC atlcore.cpp atlbase.cpp)
 
 ##############################################################################
