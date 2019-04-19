@@ -1,4 +1,4 @@
-# Unofficial ReactOS ATL (RATL)
+# Independent ReactOS ATL (RATL)
 
 Feedback is welcome.
 
