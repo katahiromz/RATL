@@ -14,17 +14,17 @@
     #include <stdio.h>
     #include <stdarg.h>
     #include <windows.h>
-    static int g_tests_executed = 0;
-    static int g_tests_failed = 0;
-    static int g_tests_skipped = 0;
-    static const char *g_file = NULL;
-    static int g_line = 0;
-    static void set_location(const char *file, int line)
+    int g_tests_executed = 0;
+    int g_tests_failed = 0;
+    int g_tests_skipped = 0;
+    const char *g_file = NULL;
+    int g_line = 0;
+    void set_location(const char *file, int line)
     {
         g_file = file;
         g_line = line;
     }
-    static void ok_func(int value, const char *fmt, ...)
+    void ok_func(int value, const char *fmt, ...)
     {
         va_list va;
         va_start(va, fmt);
@@ -37,7 +37,7 @@
         g_tests_executed++;
         va_end(va);
     }
-    static void skip_func(const char *fmt, ...)
+    void skip_func(const char *fmt, ...)
     {
         va_list va;
         va_start(va, fmt);
@@ -57,7 +57,7 @@
         skip_func(__VA_ARGS__); \
     } while (0)
     #define START_TEST(x)   int main()
-    static char *wine_dbgstr_w(const wchar_t *wstr)
+    char *wine_dbgstr_w(const wchar_t *wstr)
     {
         static char buf[512];
         WideCharToMultiByte(CP_ACP, 0, wstr, -1, buf, _countof(buf), NULL, NULL);

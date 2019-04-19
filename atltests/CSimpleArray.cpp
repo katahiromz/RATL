@@ -11,9 +11,9 @@
     #include <stdlib.h>
     #include <stdio.h>
     #include <stdarg.h>
-    static int g_tests_executed = 0;
-    static int g_tests_failed = 0;
-    static void ok_func(const char *file, int line, bool value, const char *fmt, ...)
+    int g_tests_executed = 0;
+    int g_tests_failed = 0;
+    void ok_func(const char *file, int line, bool value, const char *fmt, ...)
     {
         va_list va;
         va_start(va, fmt);
