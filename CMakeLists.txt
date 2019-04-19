@@ -7,14 +7,13 @@ cmake_minimum_required(VERSION 2.4)
 # enable testing
 enable_testing()
 
-# project name and language
-project(RATL CXX)
+# project name and languages
+project(RATL C CXX)
 
 ##############################################################################
 
-include_directories(atl)
+include_directories(atl common)
 
-# libratl.a
-add_library(ratl STATIC atl/atlcore.cpp atl/atlbase.cpp)
+subdirs(atltests)
 
 ##############################################################################

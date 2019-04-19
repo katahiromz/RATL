@@ -20,28 +20,18 @@
 
 #pragma once
 
+#include "atldef.h"
 #include "atlcore.h"
 #include "statreg.h"
 #include "atlcomcli.h"
 #include "atlalloc.h"
+#include "atlexcept.h"
 #include "comcat.h"
 #include "tchar.h"
 
 #ifdef _MSC_VER
 // It is common to use this in ATL constructors. They only store this for later use, so the usage is safe.
 #pragma warning(disable:4355)
-#endif
-
-#ifndef _ATL_PACKING
-#define _ATL_PACKING 8
-#endif
-
-#ifndef _ATL_FREE_THREADED
-#ifndef _ATL_APARTMENT_THREADED
-#ifndef _ATL_SINGLE_THREADED
-#define _ATL_FREE_THREADED
-#endif
-#endif
 #endif
 
 #ifndef ATLTRY
@@ -58,7 +48,6 @@
 #define ATL_DEPRECATED __declspec(deprecated)
 #endif
 
-#define offsetofclass(base, derived) (reinterpret_cast<DWORD_PTR>(static_cast<base *>(reinterpret_cast<derived *>(_ATL_PACKING))) - _ATL_PACKING)
 
 namespace ATL
 {
@@ -68,7 +57,6 @@ class CComModule;
 class CAtlComModule;
 __declspec(selectany) CAtlModule *_pAtlModule = NULL;
 __declspec(selectany) CComModule *_pModule = NULL;
-extern CAtlComModule _AtlComModule;
 
 
 struct _ATL_CATMAP_ENTRY
@@ -601,6 +589,9 @@ public:
     }
 };
 
+__declspec(selectany) CAtlComModule _AtlComModule;
+
+
 template <class T>
 HRESULT CAtlModuleT<T>::RegisterServer(BOOL bRegTypeLib, const CLSID *pCLSID)
 {
@@ -994,7 +985,8 @@ public:
     }
 };
 
-extern CAtlWinModule _AtlWinModule;
+__declspec(selectany) CAtlWinModule _AtlWinModule;
+
 
 class CComAllocator
 {
@@ -1082,11 +1074,11 @@ public:
         ATLASSERT(lpszKeyName);
 
         HKEY hKey = NULL;
-        LONG lRes = ::RegOpenKeyEx(hKeyParent, lpszKeyName, NULL, samDesired, &hKey);
+        LONG lRes = ::RegOpenKeyEx(hKeyParent, lpszKeyName, 0, samDesired, &hKey);
         if (lRes != ERROR_SUCCESS)
         {
             samDesired |= KEY_WOW64_64KEY;
-            lRes = ::RegOpenKeyEx(hKeyParent, lpszKeyName, NULL, samDesired, &hKey);
+            lRes = ::RegOpenKeyEx(hKeyParent, lpszKeyName, 0, samDesired, &hKey);
         }
         if (lRes == ERROR_SUCCESS)
         {
@@ -1107,13 +1099,13 @@ public:
         ATLASSERT(lpszKeyName);
 
         HKEY hKey = NULL;
-        LONG lRes = ::RegCreateKeyEx(hKeyParent, lpszKeyName, NULL, lpszClass,
+        LONG lRes = ::RegCreateKeyEx(hKeyParent, lpszKeyName, 0, lpszClass,
                                      dwOptions, samDesired, lpSecAttr, &hKey,
                                      lpdwDisposition);
         if (lRes != ERROR_SUCCESS)
         {
             samDesired |= KEY_WOW64_64KEY;
-            lRes = ::RegCreateKeyEx(hKeyParent, lpszKeyName, NULL, lpszClass,
+            lRes = ::RegCreateKeyEx(hKeyParent, lpszKeyName, 0, lpszClass,
                                     dwOptions, samDesired, lpSecAttr, &hKey,
                                     lpdwDisposition);
         }
@@ -1221,7 +1213,7 @@ public:
     LONG SetValue(LPCTSTR pszValueName, DWORD dwType, const void* pValue, ULONG nBytes) throw()
     {
         ATLASSERT(m_hKey);
-        return ::RegSetValueEx(m_hKey, pszValueName, NULL, dwType, (const BYTE*)pValue, nBytes);
+        return ::RegSetValueEx(m_hKey, pszValueName, 0, dwType, (const BYTE*)pValue, nBytes);
     }
 
     LONG SetDWORDValue(LPCTSTR pszValueName, DWORD dwValue) throw()
