@@ -12,6 +12,8 @@ project(RATL C CXX)
 
 ##############################################################################
 
+add_definitions(-DHAVE_APITEST -D_USE_PSEH3)
+
 include_directories(atl common)
 
 subdirs(atltests)

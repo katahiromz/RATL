@@ -1,5 +1,5 @@
 
-add_definitions(-DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG -DHAVE_APITEST -D_USE_PSEH3)
+add_definitions(-DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG)
 
 include_directories(../atl ../common)
 
