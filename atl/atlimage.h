@@ -377,20 +377,15 @@ public:
     HRESULT Load(LPCTSTR pszFileName) throw()
     {
         // convert the file name string into Unicode
-        // TODO: use a string class
-#ifdef UNICODE
-        LPCWSTR pszNameW = pszFileName;
-#else
-        WCHAR szPath[MAX_PATH];
-        ::MultiByteToWideChar(CP_ACP, 0, pszFileName, -1, szPath, MAX_PATH);
-        LPCWSTR pszNameW = szPath;
-#endif
+        CStringW pszNameW(pszFileName);
 
         // create a GpBitmap object from file
         using namespace Gdiplus;
         GpBitmap *pBitmap = NULL;
-        GetCommon().CreateBitmapFromFile(pszNameW, &pBitmap);
-        ATLASSERT(pBitmap);
+        if (GetCommon().CreateBitmapFromFile(pszNameW, &pBitmap) != Ok)
+        {
+            return E_FAIL;
+        }
 
         // TODO & FIXME: get parameters (m_rgbTransColor etc.)
 
@@ -414,8 +409,10 @@ public:
         // create GpBitmap from stream
         using namespace Gdiplus;
         GpBitmap *pBitmap = NULL;
-        GetCommon().CreateBitmapFromStream(pStream, &pBitmap);
-        ATLASSERT(pBitmap);
+        if (GetCommon().CreateBitmapFromStream(pStream, &pBitmap) != Ok)
+        {
+            return E_FAIL;
+        }
 
         // TODO & FIXME: get parameters (m_rgbTransColor etc.)
 
@@ -546,6 +543,7 @@ public:
 
         return (status == Ok ? S_OK : E_FAIL);
     }
+
     HRESULT Save(LPCTSTR pszFileName,
                  REFGUID guidFileType = GUID_NULL) const throw()
     {
@@ -555,18 +553,11 @@ public:
         // TODO & FIXME: set parameters (m_rgbTransColor etc.)
 
         // convert the file name string into Unicode
-        // TODO: use a string class
-#ifdef UNICODE
-        LPCWSTR pszNameW = pszFileName;
-#else
-        WCHAR szPath[MAX_PATH];
-        ::MultiByteToWideChar(CP_ACP, 0, pszFileName, -1, szPath, MAX_PATH);
-        LPCWSTR pszNameW = szPath;
-#endif
+        CStringW pszNameW(pszFileName);
 
         // if the file type is null, get the file type from extension
         const GUID *FileType = &guidFileType;
-        if (IsGuidEqual(guidFileType, GUID_NULL))
+        if (::IsEqualGUID(guidFileType, GUID_NULL))
         {
             LPCWSTR pszExt = GetFileExtension(pszNameW);
             FileType = FileTypeFromExtension(pszExt);
@@ -838,15 +829,17 @@ protected:
         }
     };
 
+    // abbreviations of GDI+ basic types
+    typedef Gdiplus::GpStatus St;
+    typedef Gdiplus::GpBitmap Bm;
+    typedef Gdiplus::GpImage Im;
+
     // The common data of atlimage
     struct COMMON
     {
         // abbreviations of GDI+ basic types
-        typedef Gdiplus::GpStatus St;
         typedef Gdiplus::ImageCodecInfo ICI;
-        typedef Gdiplus::GpBitmap Bm;
         typedef Gdiplus::EncoderParameters EncParams;
-        typedef Gdiplus::GpImage Im;
         typedef Gdiplus::ARGB ARGB;
         typedef HBITMAP HBM;
         typedef Gdiplus::GdiplusStartupInput GSI;
@@ -1081,7 +1074,7 @@ protected:
         const size_t count = _countof(table);
         for (size_t i = 0; i < count; ++i)
         {
-            if (IsGuidEqual(table[i].guid, *guid))
+            if (::IsEqualGUID(table[i].guid, *guid))
             {
                 int num = GetEncoderClsid(table[i].mime, clsid);
                 if (num >= 0)
@@ -1121,18 +1114,6 @@ protected:
 
         delete[] pb;
         return -1;  // failure
-    }
-
-    bool IsGuidEqual(const GUID& guid1, const GUID& guid2) const
-    {
-        RPC_STATUS status;
-        if (::UuidEqual(const_cast<GUID *>(&guid1),
-                        const_cast<GUID *>(&guid2), &status))
-        {
-            if (status == RPC_S_OK)
-                return true;
-        }
-        return false;
     }
 
     void AttachInternal(HBITMAP hBitmap, DIBOrientation eOrientation,

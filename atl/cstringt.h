@@ -140,6 +140,20 @@ public:
         return ::_wcsicmp(psz1, psz2);
     }
 
+    static int __cdecl StringSpanIncluding(
+        _In_z_ LPCWSTR pszBlock,
+        _In_z_ LPCWSTR pszSet)
+    {
+        return (int)::wcsspn(pszBlock, pszSet);
+    }
+
+    static int __cdecl StringSpanExcluding(
+        _In_z_ LPCWSTR pszBlock,
+        _In_z_ LPCWSTR pszSet)
+    {
+        return (int)::wcscspn(pszBlock, pszSet);
+    }
+
     static int __cdecl FormatV(
         _In_opt_z_ LPWSTR pszDest,
         _In_z_ LPCWSTR pszFormat,
@@ -148,6 +162,16 @@ public:
         if (pszDest == NULL)
             return ::_vscwprintf(pszFormat, args);
         return ::vswprintf(pszDest, pszFormat, args);
+    }
+
+    static LPWSTR
+    FormatMessageV(_In_z_ LPCWSTR pszFormat, _In_opt_ va_list *pArgList)
+    {
+        LPWSTR psz;
+        ::FormatMessageW(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_STRING, pszFormat, 0, 0,
+            reinterpret_cast<LPWSTR>(&psz), 0, pArgList);
+        return psz;
     }
 
     static BSTR __cdecl AllocSysString(
@@ -279,6 +303,20 @@ public:
         return ::_stricmp(psz1, psz2);
     }
 
+    static int __cdecl StringSpanIncluding(
+        _In_z_ LPCSTR pszBlock,
+        _In_z_ LPCSTR pszSet)
+    {
+        return (int)::strspn(pszBlock, pszSet);
+    }
+
+    static int __cdecl StringSpanExcluding(
+        _In_z_ LPCSTR pszBlock,
+        _In_z_ LPCSTR pszSet)
+    {
+        return (int)::strcspn(pszBlock, pszSet);
+    }
+
     static int __cdecl FormatV(
         _In_opt_z_ LPSTR pszDest,
         _In_z_ LPCSTR pszFormat,
@@ -287,6 +325,16 @@ public:
         if (pszDest == NULL)
             return ::_vscprintf(pszFormat, args);
         return ::vsprintf(pszDest, pszFormat, args);
+    }
+
+    static LPSTR
+    FormatMessageV(_In_z_ LPCSTR pszFormat, _In_opt_ va_list *pArgList)
+    {
+        LPSTR psz;
+        ::FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_STRING, pszFormat, 0, 0, reinterpret_cast<LPSTR>(&psz),
+            0, pArgList);
+        return psz;
     }
 
     static BSTR __cdecl AllocSysString(
@@ -403,13 +451,13 @@ public:
     }
 
     CStringT(_In_reads_z_(nLength) const XCHAR* pch,
-             _In_ int nLength) : 
+             _In_ int nLength) :
         CThisSimpleString(pch, nLength, StringTraits::GetDefaultManager())
     {
     }
 
     CStringT(_In_reads_z_(nLength) const YCHAR* pch,
-             _In_ int nLength) : 
+             _In_ int nLength) :
         CThisSimpleString(pch, nLength, StringTraits::GetDefaultManager())
     {
     }
@@ -483,6 +531,43 @@ public:
     friend bool operator==(XCHAR ch1, const CStringT& str2) throw()
     {
         return str2.GetLength() == 1 && str2[0] == ch1;
+    }
+
+    friend bool operator!=(const CStringT& str1, const CStringT& str2) throw()
+    {
+        return str1.Compare(str2) != 0;
+    }
+
+    friend bool operator!=(const CStringT& str1, PCXSTR psz2) throw()
+    {
+        return str1.Compare(psz2) != 0;
+    }
+
+    friend bool operator!=(const CStringT& str1, PCYSTR psz2) throw()
+    {
+        CStringT tmp(psz2, str1.GetManager());
+        return tmp.Compare(str1) != 0;
+    }
+
+    friend bool operator!=(const CStringT& str1, XCHAR ch2) throw()
+    {
+        return str1.GetLength() != 1 || str1[0] != ch2;
+    }
+
+    friend bool operator!=(PCXSTR psz1, const CStringT& str2) throw()
+    {
+        return str2.Compare(psz1) != 0;
+    }
+
+    friend bool operator!=(PCYSTR psz1, const CStringT& str2) throw()
+    {
+        CStringT tmp(psz1, str2.GetManager());
+        return tmp.Compare(str2) != 0;
+    }
+
+    friend bool operator!=(XCHAR ch1, const CStringT& str2) throw()
+    {
+        return str2.GetLength() != 1 || str2[0] != ch1;
     }
 
     CStringT& operator+=(_In_ const CThisSimpleString& str)
@@ -664,6 +749,23 @@ public:
         return CStringT(CThisSimpleString::GetString() + nLength - nCount, nCount);
     }
 
+    void __cdecl AppendFormat(UINT nFormatID, ...)
+    {
+        va_list args;
+        va_start(args, nFormatID);
+        CStringT formatString;
+        if (formatString.LoadString(nFormatID))
+            AppendFormatV(formatString, args);
+        va_end(args);
+    }
+
+    void __cdecl AppendFormat(PCXSTR pszFormat, ...)
+    {
+        va_list args;
+        va_start(args, pszFormat);
+        AppendFormatV(pszFormat, args);
+        va_end(args);
+    }
 
     void __cdecl Format(UINT nFormatID, ...)
     {
@@ -683,6 +785,16 @@ public:
         va_end(args);
     }
 
+    void AppendFormatV(PCXSTR pszFormat, va_list args)
+    {
+        int nLength = StringTraits::FormatV(NULL, pszFormat, args);
+        int nCurrent = CThisSimpleString::GetLength();
+
+        PXSTR pszBuffer = CThisSimpleString::GetBuffer(nLength + nCurrent);
+        StringTraits::FormatV(pszBuffer + nCurrent, pszFormat, args);
+        CThisSimpleString::ReleaseBufferSetLength(nLength + nCurrent);
+    }
+
     void FormatV(PCXSTR pszFormat, va_list args)
     {
         int nLength = StringTraits::FormatV(NULL, pszFormat, args);
@@ -692,6 +804,36 @@ public:
         CThisSimpleString::ReleaseBufferSetLength(nLength);
     }
 
+    void __cdecl FormatMessage(UINT nFormatID, ...)
+    {
+        va_list va;
+        va_start(va, nFormatID);
+
+        CStringT str;
+        if (str.LoadString(nFormatID))
+            FormatMessageV(str, &va);
+
+        va_end(va);
+    }
+
+    void __cdecl FormatMessage(PCXSTR pszFormat, ...)
+    {
+        va_list va;
+        va_start(va, pszFormat);
+        FormatMessageV(pszFormat, &va);
+        va_end(va);
+    }
+
+    void
+    FormatMessageV(PCXSTR pszFormat, va_list *pArgList)
+    {
+        PXSTR psz = StringTraits::FormatMessageV(pszFormat, pArgList);
+        if (!psz)
+            CThisSimpleString::ThrowMemoryException();
+
+        *this = psz;
+        ::LocalFree(psz);
+    }
 
     int Replace(PCXSTR pszOld, PCXSTR pszNew)
     {
@@ -753,6 +895,42 @@ public:
         return nCount;
     }
 
+
+    CStringT Tokenize(_In_z_ PCXSTR pszTokens, _Inout_ int& iStart) const
+    {
+        ATLASSERT(iStart >= 0);
+
+        if (iStart < 0)
+            AtlThrow(E_INVALIDARG);
+
+        if (!pszTokens || !pszTokens[0])
+        {
+            if (iStart < CThisSimpleString::GetLength())
+            {
+                return Mid(iStart);
+            }
+            iStart = -1;
+            return CStringT();
+        }
+
+        if (iStart < CThisSimpleString::GetLength())
+        {
+            int iRangeOffset = StringTraits::StringSpanIncluding(CThisSimpleString::GetString() + iStart, pszTokens);
+
+            if (iRangeOffset + iStart < CThisSimpleString::GetLength())
+            {
+                int iNewStart = iStart + iRangeOffset;
+                int nCount = StringTraits::StringSpanExcluding(CThisSimpleString::GetString() + iNewStart, pszTokens);
+
+                iStart = iNewStart + nCount + 1;
+
+                return Mid(iNewStart, nCount);
+            }
+        }
+
+        iStart = -1;
+        return CStringT();
+    }
 
     static PCXSTR DefaultTrimChars()
     {

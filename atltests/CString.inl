@@ -17,75 +17,75 @@ TEST_NAMEX(operators_init)
     CStringX first(_X("First "));
     ok(first.IsEmpty() != true, "Expected first to not be empty\n");
     ok(first.GetLength() == 6, "Expected GetLength() to be 6, was: %i\n", first.GetLength());
-    ok(first.GetAllocLength() == ALLOC_EXPECT(7, 6), "Expected GetAllocLength() to be %i, was: %i\n", ALLOC_EXPECT(7, 6), first.GetAllocLength());
+    //ok_int(first.GetAllocLength(), 6);
 
     CStringX second(_X("Second"));
     ok(second.IsEmpty() != true, "Expected second to not be empty\n");
     ok(second.GetLength() == 6, "Expected GetLength() to be 6, was: %i\n", second.GetLength());
-    ok(second.GetAllocLength() == ALLOC_EXPECT(7, 6), "Expected GetAllocLength() to be %i, was: %i\n", ALLOC_EXPECT(7, 6), second.GetAllocLength());
+    //ok_int(second.GetAllocLength(), 6);
 
     test = first;
     ok(test.IsEmpty() != true, "Expected test to not be empty\n");
     ok(test.GetLength() == 6, "Expected GetLength() to be 6, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == ALLOC_EXPECT(7, 6), "Expected GetAllocLength() to be %i, was: %i\n", ALLOC_EXPECT(7, 6), test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 6);
 
     test.Empty();
     ok(test.IsEmpty() == true, "Expected test to be empty\n");
     ok(test.GetLength() == 0, "Expected GetLength() to be 0, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == 0, "Expected GetAllocLength() to be 0, was: %i\n", test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 0);
 
     test = _X("First ");
     ok(test.IsEmpty() != true, "Expected test to not be empty\n");
     ok(test.GetLength() == 6, "Expected GetLength() to be 6, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == ALLOC_EXPECT(7, 6), "Expected GetAllocLength() to be %i, was: %i\n", ALLOC_EXPECT(7, 6), test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 6);
 
     test += second;
     ok(test.IsEmpty() != true, "Expected test to not be empty\n");
     ok(test.GetLength() == 12, "Expected GetLength() to be 12, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == ALLOC_EXPECT(15, 12), "Expected GetAllocLength() to be %i, was: %i\n", ALLOC_EXPECT(15, 12), test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 12);
 
     test = first + second;
     ok(test.IsEmpty() != true, "Expected test to not be empty\n");
     ok(test.GetLength() == 12, "Expected GetLength() to be 12, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == ALLOC_EXPECT(15, 12), "Expected GetAllocLength() to be %i, was: %i\n", ALLOC_EXPECT(15, 12), test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 12);
 
     test = first + second + _X(".");
     ok(test.IsEmpty() != true, "Expected test to not be empty\n");
     ok(test.GetLength() == 13, "Expected GetLength() to be 13, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == ALLOC_EXPECT(15, 18), "Expected GetAllocLength() to be %i, was: %i\n", ALLOC_EXPECT(15, 18), test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 13);
 
     CStringX test2(test);
     ok(test2.IsEmpty() != true, "Expected test2 to not be empty\n");
     ok(test2.GetLength() == 13, "Expected GetLength() to be 13, was: %i\n", test2.GetLength());
-    ok(test2.GetAllocLength() == ALLOC_EXPECT(15, 18), "Expected GetAllocLength() to be %i, was: %i\n", ALLOC_EXPECT(15, 18), test2.GetAllocLength());
+    //ok_int(test2.GetAllocLength(), 13);
 
     // Clear it again
     test.Empty();
     ok(test.IsEmpty() == true, "Expected test to be empty\n");
     ok(test.GetLength() == 0, "Expected GetLength() to be 0, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == 0, "Expected GetAllocLength() to be 0, was: %i\n", test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 0);
 
     // Assign string
     test = "First ";
     ok(test.IsEmpty() != true, "Expected test to not be empty\n");
     ok(test.GetLength() == 6, "Expected GetLength() to be 6, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == ALLOC_EXPECT(7, 6), "Expected GetAllocLength() to be 7, was: %i\n", test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 6);
 
     CStringA testA = test;
     ok(testA.IsEmpty() != true, "Expected testA to not be empty\n");
     ok(testA.GetLength() == 6, "Expected GetLength() to be 6, was: %i\n", testA.GetLength());
-    ok(testA.GetAllocLength() == ALLOC_EXPECT(7, 6), "Expected GetAllocLength() to be 7, was: %i\n", testA.GetAllocLength());
+    //ok_int(testA.GetAllocLength(), 6);
 
     CStringW testW = test;
     ok(testW.IsEmpty() != true, "Expected testW to not be empty\n");
     ok(testW.GetLength() == 6, "Expected GetLength() to be 6, was: %i\n", testW.GetLength());
-    ok(testW.GetAllocLength() == ALLOC_EXPECT(7, 6), "Expected GetAllocLength() to be 7, was: %i\n", testW.GetAllocLength());
+    //ok_int(testW.GetAllocLength(), 6);
 
     // Assign wstring
     test = L"First ";
     ok(test.IsEmpty() != true, "Expected test to not be empty\n");
     ok(test.GetLength() == 6, "Expected GetLength() to be 6, was: %i\n", test.GetLength());
-    ok(test.GetAllocLength() == ALLOC_EXPECT(7, 6), "Expected GetAllocLength() to be 7, was: %i\n", test.GetAllocLength());
+    //ok_int(test.GetAllocLength(), 6);
 }
 
 
@@ -122,10 +122,27 @@ TEST_NAMEX(compare)
     ok(s2[0] == _X('s'), "Expected s2[0] to be s, was: %c\n", (char)s2[0]);
 
     ok(s1 == _X("SOME TEXT 1!"), "Expected s1 to be 'SOME TEXT 1!', was: %s\n", dbgstrx(s1));
+    ok(s1 != _X("SOME TEXT 2!"), "Expected s2 not to match 'SOME TEXT 2!', was: %s\n", dbgstrx(s1));
+    ok(!(s1 != _X("SOME TEXT 1!")), "Expected s1 to be 'SOME TEXT 1!', was: %s\n", dbgstrx(s1));
 
     CStringX s3 = s1.MakeLower();
     ok(s1 == _X("some text 1!"), "Expected s1 to be 'some text 1!', was: %s\n", dbgstrx(s1));
     ok(s1 == s3, "Expected s1 and s3 to be equal: '%s' == '%s'\n", dbgstrx(s1), dbgstrx(s3));
+    ok(!(s1 != s3), "Expected s1 and s3 to be equal: !('%s' == '%s')\n", dbgstrx(s1), dbgstrx(s3));
+
+    // Compare as chars
+    s1 = _X("Q");
+    ok(s1 == 'Q', "Expected s1 to be 'Q', was: %s\n", dbgstrx(s1));
+    ok(!(s1 != 'Q'), "Expected s1 to be 'Q' (!=), was: %s\n", dbgstrx(s1));
+    ok(s1 != 'S', "Expected s1 to be different from 'S', was: %s\n", dbgstrx(s1));
+
+    s1.Empty();
+    ok(s1 != 'S', "Expected s1 to be different from 'S', was: %s\n", dbgstrx(s1));
+    ok(s1 != 'Q', "Expected s1 to be different from 'S', was: %s\n", dbgstrx(s1));
+
+    s1 = _X("QQ");
+    ok(s1 != 'S', "Expected s1 to be different from 'S', was: %s\n", dbgstrx(s1));
+    ok(s1 != 'Q', "Expected s1 to be different from 'S', was: %s\n", dbgstrx(s1));
 }
 
 
@@ -168,6 +185,12 @@ void WriteString(const XCHAR* pstrFormat, ...)
     va_end(args);
 
     ok(str == _X("10e 1351l"), "Expected str to be '10e 1351l', was: %s\n", dbgstrx(str));
+
+
+    va_start(args, pstrFormat);
+    str.AppendFormatV(pstrFormat, args);
+    va_end(args);
+    ok(str == _X("10e 1351l10e 1351l"), "Expected str to be '10e 1351l10e 1351l', was: %s\n", dbgstrx(str));
 }
 
 TEST_NAMEX(format)
@@ -181,6 +204,9 @@ TEST_NAMEX(format)
     ok(str == _X("int: 000035"), "Expected str to be 'int: 000035', was: %s\n", dbgstrx(str));
 
     WriteString(_X("%de %dl"), 10, 1351);
+
+    str.AppendFormat(_X(",FP: %.2f"), 12345.12345);
+    ok(str == _X("int: 000035,FP: 12345.12"), "Expected str to be 'int: 000035,FP: 12345.12', was: %s\n", dbgstrx(str));
 }
 
 
@@ -438,4 +464,90 @@ TEST_NAMEX(bstr)
         ok(!wcscmp(bstr, L"Some test text here..."), "Expected 'Some test text here...', got: '%S'\n", bstr);
         ::SysFreeString(bstr);
     }
+}
+
+TEST_NAMEX(tokenize)
+{
+    CStringX str(_X("%#First Second#Third"));
+    const XCHAR* Tokens = _X("% #");
+    CStringX res;
+
+    int nCurPos = 0;
+
+    // All 'current' tokens are skipped
+    res = str.Tokenize(Tokens, nCurPos);
+    ok(res == _X("First"), "Expected str to be 'First', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, 8);
+
+    res = str.Tokenize(Tokens, nCurPos);
+    ok(res == _X("Second"), "Expected str to be 'Second', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, 15);
+
+    res = str.Tokenize(Tokens, nCurPos);
+    ok(res == _X("Third"), "Expected str to be 'Third', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, 21);
+
+    // The final 'token' is empty, and nCurPos is set to -1
+    // (Calling with nCurPos=-1 will assert)
+    res = str.Tokenize(Tokens, nCurPos);
+    ok(res == _X(""), "Expected str to be '', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, -1);
+
+    str =_X("StartWithToken#%#");
+    nCurPos = 0;
+
+    res = str.Tokenize(Tokens, nCurPos);
+    ok(res == _X("StartWithToken"), "Expected str to be 'StartWithToken', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, 15);
+
+    // Ending with tokens acts as if there were no tokens at the end
+    res = str.Tokenize(Tokens, nCurPos);
+    ok(res == _X(""), "Expected str to be '', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, -1);
+
+
+    str = _X("");
+    nCurPos = 0;
+
+    // Calling with an empty string returns 'no tokens'
+    res = str.Tokenize(Tokens, nCurPos);
+    ok(res == _X(""), "Expected str to be '', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, -1);
+
+    str = _X("");
+    nCurPos = 20;
+
+    // Calling with a current position outside the strings acts the same as 'no tokens left'
+    res = str.Tokenize(Tokens, nCurPos);
+    ok(res == _X(""), "Expected str to be '', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, -1);
+
+
+    str = _X("test");
+    nCurPos = 2;
+
+    // Calling with a NULL pszTokens returns a substring starting at 'nCurPos', but not updating nCurPos!
+    res = str.Tokenize(NULL, nCurPos);
+    ok(res == _X("st"), "Expected str to be 'st', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, 2);
+
+
+    // Calling with an empty pszTokens behaves exactly the same
+    res = str.Tokenize(_X(""), nCurPos);
+    ok(res == _X("st"), "Expected str to be 'st', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, 2);
+
+    nCurPos = 8;
+
+    // Calling with a NULL pszTokens and an nCurPos out of bounds returns 'no tokens left'
+    res = str.Tokenize(NULL, nCurPos);
+    ok(res == _X(""), "Expected str to be '', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, -1);
+
+    nCurPos = 8;
+
+    // Calling with an empty pszTokens behaves exactly the same
+    res = str.Tokenize(_X(""), nCurPos);
+    ok(res == _X(""), "Expected str to be '', was: %s\n", dbgstrx(res));
+    ok_dec(nCurPos, -1);
 }

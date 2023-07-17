@@ -99,7 +99,18 @@ public:
         _In_reads_(NumElements) T* Source,
         _In_ size_t NumElements)
     {
+        // A simple memmove works for most of the types.
+        // You'll have to override this for types that have pointers to their
+        // own members.
+
+#if defined(__GNUC__) && __GNUC__ >= 8
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
         memmove(Dest, Source, NumElements * sizeof(T));
+#if defined(__GNUC__) && __GNUC__ >= 8
+    #pragma GCC diagnostic pop
+#endif
     }
 };
 
@@ -144,6 +155,17 @@ class CElementTraits :
     public CDefaultElementTraits<T>
 {
 };
+
+
+template<typename T, class Allocator = CCRTAllocator>
+class CHeapPtrElementTraits :
+    public CDefaultElementTraits< CHeapPtr<T, Allocator> >
+{
+public:
+    typedef CHeapPtr<T, Allocator>& INARGTYPE;
+    typedef T*& OUTARGTYPE;
+};
+
 
 
 template<typename E, class ETraits = CElementTraits<E> >
@@ -238,6 +260,10 @@ public:
 
     E& GetAt(size_t iElement);
     const E& GetAt(size_t iElement) const;
+
+    E* GetData();
+    const E* GetData() const;
+
 
     //FIXME: Most of this class is missing!
 };
@@ -381,6 +407,17 @@ const E& CAtlArray<E, ETraits>::GetAt(size_t iElement) const
     return m_pData[iElement];
 }
 
+template<typename E, class ETraits>
+E* CAtlArray<E, ETraits>::GetData()
+{
+    return m_pData;
+}
+
+template<typename E, class ETraits>
+const E* CAtlArray<E, ETraits>::GetData() const
+{
+    return m_pData;
+}
 
 
 template<typename E, class ETraits = CElementTraits<E> >
@@ -456,6 +493,8 @@ public:
         INARGTYPE element,
         _In_opt_ POSITION posStartAfter = NULL) const;
     POSITION FindIndex(_In_ size_t iElement) const;
+
+    void SwapElements(POSITION pos1, POSITION pos2);
 
 private:
     CNode* CreateNode(
@@ -772,6 +811,45 @@ POSITION CAtlList< E, ETraits >::FindIndex(_In_ size_t iElement) const
     return (POSITION)Node;
 }
 
+template<typename E, class ETraits>
+void CAtlList< E, ETraits >::SwapElements(POSITION pos1, POSITION pos2)
+{
+    if (pos1 == pos2)
+        return;
+
+
+    CNode *node1 = (CNode *)pos1;
+    CNode *node2 = (CNode *)pos2;
+
+    CNode *tmp = node1->m_Prev;
+    node1->m_Prev = node2->m_Prev;
+    node2->m_Prev = tmp;
+
+    if (node1->m_Prev)
+        node1->m_Prev->m_Next = node1;
+    else
+        m_HeadNode = node1;
+
+    if (node2->m_Prev)
+        node2->m_Prev->m_Next = node2;
+    else
+        m_HeadNode = node2;
+
+    tmp = node1->m_Next;
+    node1->m_Next = node2->m_Next;
+    node2->m_Next = tmp;
+
+    if (node1->m_Next)
+        node1->m_Next->m_Prev = node1;
+    else
+        m_TailNode = node1;
+
+    if (node2->m_Next)
+        node2->m_Next->m_Prev = node2;
+    else
+        m_TailNode = node2;
+}
+
 
 //
 // CAtlist private methods
@@ -828,7 +906,7 @@ typename CAtlList<E, ETraits>::CNode* CAtlList< E, ETraits>::GetFreeNode()
     {
         AtlThrowImp(E_OUTOFMEMORY);
     }
-    
+
     CNode* Node = (CNode*)Block->GetData();
     Node += (m_BlockSize - 1);
     for (int i = m_BlockSize - 1; i >= 0; i--)
@@ -840,6 +918,23 @@ typename CAtlList<E, ETraits>::CNode* CAtlList< E, ETraits>::GetFreeNode()
 
     return m_FreeNode;
 }
+
+
+template<typename E, class Allocator = CCRTAllocator >
+class CHeapPtrList :
+    public CAtlList<CHeapPtr<E, Allocator>, CHeapPtrElementTraits<E, Allocator> >
+{
+public:
+    CHeapPtrList(_In_ UINT nBlockSize = 10) :
+        CAtlList<CHeapPtr<E, Allocator>, CHeapPtrElementTraits<E, Allocator> >(nBlockSize)
+    {
+    }
+
+private:
+    CHeapPtrList(const CHeapPtrList&);
+    CHeapPtrList& operator=(const CHeapPtrList*);
+};
+
 
 }
 
