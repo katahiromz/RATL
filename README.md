@@ -1,5 +1,5 @@
 # Independent ReactOS ATL (RATL)
 
-Feedback is welcome.
+This is an "Active Template Library" clone. Feedback is welcome.
 
 License: LGPL2.1
