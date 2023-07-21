@@ -15,6 +15,7 @@
 namespace ATL
 {
 
+// This class does not own the string
 template <int t_nBufferLength = 128>
 class CA2CAEX
 {
@@ -22,17 +23,23 @@ public:
     LPCSTR m_psz;
 
     CA2CAEX(_In_z_ LPCSTR psz) : m_psz(psz) { }
-    CA2CAEX(_In_z_ LPCSTR psz, _In_ UINT nCodePage) : m_psz(psz) { }
-    ~CA2CAEX() throw() { }
+
+    CA2CAEX(_In_z_ LPCSTR psz, _In_ UINT nCodePage) : m_psz(psz)
+    {
+        UNREFERENCED_PARAMETER(nCodePage);
+    }
+
+    ~CA2CAEX() throw() { } // There is nothing to free here
 
     _Ret_z_ operator LPCSTR() const throw() { return m_psz; }
 
 private:
     // CA2CAEX is not copyable
-    CA2CAEX(_In_ const CA2CAEX&) throw();
-    CA2CAEX& operator=(_In_ const CA2CAEX&) throw();
+    CA2CAEX(_In_ const CA2CAEX&) throw() = delete;
+    CA2CAEX& operator=(_In_ const CA2CAEX&) throw() = delete;
 };
 
+// This class does not own the string
 template <int t_nBufferLength = 128>
 class CW2CWEX
 {
@@ -40,15 +47,20 @@ public:
     LPCWSTR m_psz;
 
     CW2CWEX(_In_z_ LPCWSTR psz) : m_psz(psz) { }
-    CW2CWEX(_In_z_ LPCWSTR psz, _In_ UINT nCodePage) : m_psz(psz) { }
-    ~CW2CWEX() throw() { }
+
+    CW2CWEX(_In_z_ LPCWSTR psz, _In_ UINT nCodePage) : m_psz(psz)
+    {
+        UNREFERENCED_PARAMETER(nCodePage);
+    }
+
+    ~CW2CWEX() throw() { } // There is nothing to free here
 
     _Ret_z_ operator LPCWSTR() const throw() { return m_psz; }
 
 private:
     // CW2CWEX is not copyable
-    CW2CWEX(_In_ const CW2CWEX&) throw();
-    CW2CWEX& operator=(_In_ const CW2CWEX&) throw();
+    CW2CWEX(_In_ const CW2CWEX&) throw() = delete;
+    CW2CWEX& operator=(_In_ const CW2CWEX&) throw() = delete;
 };
 
 template <int t_nBufferLength = 128>
@@ -65,6 +77,7 @@ public:
 
     CA2AEX(_In_z_ LPCSTR psz, _In_ UINT nCodePage)
     {
+        UNREFERENCED_PARAMETER(nCodePage);
         Init(psz);
     }
 
@@ -81,11 +94,17 @@ public:
 
 private:
     // CA2AEX is not copyable
-    CA2AEX(_In_ const CA2AEX &) throw();
-    CA2AEX& operator=(_In_ const CA2AEX &) throw();
+    CA2AEX(_In_ const CA2AEX &) throw() = delete;
+    CA2AEX& operator=(_In_ const CA2AEX &) throw() = delete;
 
     void Init(_In_z_ LPCSTR psz)
     {
+        if (!psz)
+        {
+            m_psz = NULL;
+            m_szBuffer[0] = 0;
+            return;
+        }
         int cchMax = lstrlenA(psz) + 1;
         if (cchMax <= t_nBufferLength)
         {
@@ -98,6 +117,7 @@ private:
             return;
         }
 
+        m_szBuffer[0] = 0;
         m_psz = _strdup(psz);
         if (!m_psz)
             AtlThrow(E_OUTOFMEMORY);
@@ -118,6 +138,7 @@ public:
 
     CW2WEX(_In_z_ LPCWSTR psz, _In_ UINT nCodePage)
     {
+        UNREFERENCED_PARAMETER(nCodePage);
         Init(psz);
     }
 
@@ -134,11 +155,17 @@ public:
 
 private:
     // CW2WEX is not copyable
-    CW2WEX(_In_ const CW2WEX&) throw();
-    CW2WEX& operator=(_In_ const CW2WEX&) throw();
+    CW2WEX(_In_ const CW2WEX&) throw() = delete;
+    CW2WEX& operator=(_In_ const CW2WEX&) throw() = delete;
 
     void Init(_In_z_ LPCWSTR psz)
     {
+        if (!psz)
+        {
+            m_psz = NULL;
+            m_szBuffer[0] = 0;
+            return;
+        }
         int cchMax = lstrlenW(psz);
         if (cchMax <= t_nBufferLength)
         {
@@ -151,6 +178,7 @@ private:
             return;
         }
 
+        m_szBuffer[0] = 0;
         m_psz = _wcsdup(psz);
         if (!m_psz)
             AtlThrow(E_OUTOFMEMORY);
@@ -187,23 +215,37 @@ public:
 
 private:
     // CA2WEX is not copyable
-    CA2WEX(_In_ const CA2WEX&) throw();
-    CA2WEX& operator=(_In_ const CA2WEX&) throw();
+    CA2WEX(_In_ const CA2WEX&) throw() = delete;
+    CA2WEX& operator=(_In_ const CA2WEX&) throw() = delete;
 
     void Init(_In_z_ LPCSTR psz, _In_ UINT nCodePage)
     {
-        int cchMax = MultiByteToWideChar(nCodePage, 0, psz, -1, NULL, 0);
-        if (cchMax <= t_nBufferLength)
+        if (!psz)
         {
-            MultiByteToWideChar(nCodePage, 0, psz, -1, m_szBuffer, _countof(m_szBuffer));
-            m_szBuffer[_countof(m_szBuffer) - 1] = 0;
-            m_psz = m_szBuffer;
+            m_psz = NULL;
+            m_szBuffer[0] = 0;
             return;
         }
 
-        m_psz = (LPWSTR)malloc(cchMax * sizeof(WCHAR));
-        if (!m_psz)
-            AtlThrow(E_OUTOFMEMORY);
+#if 1
+        int cchMax = lstrlenA(psz) + 1; // This is 3 times faster
+#else
+        int cchMax = MultiByteToWideChar(nCodePage, 0, psz, -1, NULL, 0); // It's slow
+#endif
+        if (cchMax <= (int)_countof(m_szBuffer))
+        {
+            // Use the static buffer
+            m_psz = m_szBuffer;
+            cchMax = _countof(m_szBuffer);
+        }
+        else
+        {
+            // Allocate a new buffer
+            m_szBuffer[0] = 0;
+            m_psz = (LPWSTR)malloc(cchMax * sizeof(WCHAR));
+            if (!m_psz)
+                AtlThrow(E_OUTOFMEMORY);
+        }
 
         MultiByteToWideChar(nCodePage, 0, psz, -1, m_psz, cchMax);
         m_psz[cchMax - 1] = 0;
@@ -240,36 +282,46 @@ public:
 
 private:
     // CW2AEX is not copyable
-    CW2AEX(_In_ const CW2AEX&) throw();
-    CW2AEX& operator=(_In_ const CW2AEX&) throw();
+    CW2AEX(_In_ const CW2AEX&) throw() = delete;
+    CW2AEX& operator=(_In_ const CW2AEX&) throw() = delete;
 
     void Init(_In_z_ LPCWSTR psz, _In_ UINT nConvertCodePage)
     {
-        int cchMax = WideCharToMultiByte(nConvertCodePage, 0, psz, -1, NULL, 0, NULL, NULL);
-        if (cchMax <= t_nBufferLength)
+        if (!psz)
         {
-            WideCharToMultiByte(nConvertCodePage, 0, psz, -1, m_szBuffer, _countof(m_szBuffer),
-                                NULL, NULL);
-            m_szBuffer[_countof(m_szBuffer) - 1] = 0;
-            m_psz = m_szBuffer;
+            m_psz = NULL;
+            m_szBuffer[0] = 0;
             return;
         }
 
-        m_psz = (LPSTR)malloc(cchMax * sizeof(CHAR));
-        if (!m_psz)
-            AtlThrow(E_OUTOFMEMORY);
+        // NOTE: This has a failure.
+        int cchMax = WideCharToMultiByte(nConvertCodePage, 0, psz, -1, NULL, 0, NULL, NULL);
+        if (cchMax <= (int)_countof(m_szBuffer))
+        {
+            // Use the static buffer
+            m_psz = m_szBuffer;
+            cchMax = _countof(m_szBuffer);
+        }
+        else
+        {
+            // Allocate a new buffer
+            m_szBuffer[0] = 0;
+            m_psz = (LPSTR)malloc(cchMax * sizeof(CHAR));
+            if (!m_psz)
+                AtlThrow(E_OUTOFMEMORY);
+        }
 
         WideCharToMultiByte(nConvertCodePage, 0, psz, -1, m_psz, cchMax, NULL, NULL);
         m_psz[cchMax - 1] = 0;
     }
 };
 
-typedef CA2AEX<128> CA2A;
-typedef CW2AEX<128> CW2A;
-typedef CA2WEX<128> CA2W;
-typedef CW2WEX<128> CW2W;
-typedef CA2CAEX<128> CA2CA;
-typedef CW2CWEX<128> CW2CW;
+typedef CA2AEX<> CA2A;
+typedef CW2AEX<> CW2A;
+typedef CA2WEX<> CA2W;
+typedef CW2WEX<> CW2W;
+typedef CA2CAEX<> CA2CA;
+typedef CW2CWEX<> CW2CW;
 
 #ifdef UNICODE
     #define CA2CTEX CA2WEX
