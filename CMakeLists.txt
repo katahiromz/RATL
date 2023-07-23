@@ -10,26 +10,30 @@ enable_testing()
 # project name and languages
 project(RATL C CXX RC)
 
+include(CheckIncludeFileCXX)
+
+# check <sal.h> existence
+check_include_file_cxx(sal.h HAVE_SAL_H)
+
+# check <excpt.h> existence
+check_include_file_cxx(excpt.h HAVE_EXCPT_H)
+
 ##############################################################################
 # RATL settings
 
 # RATL_DEFINITIONS
-set(RATL_DEFINITIONS -DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG -DHAVE_APITEST -D_USE_PSEH3)
+set(RATL_DEFINITIONS -DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG -DHAVE_APITEST -D_USE_PSEH3 -D__RATL__)
 if(MSVC)
-    set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D__REACTOS__)
-    if (CMAKE_SYSTEM_PROCESSOR MATCHES "(amd64)|(AMD64)")
-        set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D_AMD64_ -D_M_AMD64)
-    elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)")
-        set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D_X86_)
-    endif()
+    set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D__MINGW_ATTRIB_UNUSED= -D_CRT_SECURE_NO_WARNINGS -D_NEW=)
 endif()
 
 # RATL_INCLUDE_DIRS
-set(RATL_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/atl ${CMAKE_CURRENT_SOURCE_DIR}/common)
-if(MSVC)
-    set(RATL_INCLUDE_DIRS ${RATL_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/common/msvc)
-else()
-    set(RATL_INCLUDE_DIRS ${RATL_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/common/gcc)
+set(RATL_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/atl ${CMAKE_CURRENT_SOURCE_DIR}/include)
+if(NOT(HAVE_SAL_H))
+    set(RATL_INCLUDE_DIRS ${RATL_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include/sal)
+endif()
+if(NOT(HAVE_EXCPT_H))
+    set(RATL_INCLUDE_DIRS ${RATL_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include/excpt)
 endif()
 
 # RATL_LIBRARIES
