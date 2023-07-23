@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.0)
 enable_testing()
 
 # project name and languages
-project(RATL C CXX)
+project(RATL C CXX RC)
 
 ##############################################################################
 

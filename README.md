@@ -2,6 +2,10 @@
 
 This is an "Active Template Library" clone. Feedback is welcome.
 
+## Requirements
+
+- Win32/C/C++ and CMake
+
 ## How to use RATL
 
 ### 1. Clone RATL

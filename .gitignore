@@ -27,3 +27,4 @@ ipch
 x64
 lib*.a
 Testing
+a.*
