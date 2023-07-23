@@ -28,3 +28,7 @@ x64
 lib*.a
 Testing
 a.*
+*.sln
+*.vcproj
+*.vcxproj
+*.db

@@ -6,6 +6,8 @@ This is an "Active Template Library" clone. Feedback is welcome.
 
 - Win32 C/C++ compilers and CMake
 
+Tested on MSYS2 and RosBE.
+
 ## How to use RATL
 
 ### 1. Clone RATL
