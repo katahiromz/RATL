@@ -6,7 +6,7 @@ This is an "Active Template Library" clone. Feedback is welcome.
 
 - Win32 C/C++ compilers and CMake
 
-Tested on MSYS2 and RosBE.
+Tested on MSYS2.
 
 ## How to use RATL
 

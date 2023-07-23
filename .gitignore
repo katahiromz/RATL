@@ -32,3 +32,5 @@ a.*
 *.vcproj
 *.vcxproj
 *.db
+.ninja*
+*.ninja
