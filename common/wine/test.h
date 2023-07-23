@@ -772,7 +772,7 @@ int main( int argc, char **argv )
 
 #define ok_ptr(expression, result) \
     do { \
-        void *_value = (expression); \
+        const void *_value = (expression); \
         ok(_value == (result), "Wrong value for '%s', expected: " #result " (%p), got: %p\n", \
            #expression, (void*)(result), _value); \
     } while (0)
