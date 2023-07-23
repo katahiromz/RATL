@@ -28,7 +28,7 @@ Or:
 target_compile_definitions(... PRIVATE ${RATL_DEFINITIONS})
 ```
 
-### 3. Include `${RATL_INCLUDE_DIRS}`
+### 3. Add include directories `${RATL_INCLUDE_DIRS}`
 
 ```txt
 include_directories(${RATL_INCLUDE_DIRS})
@@ -46,10 +46,22 @@ target_include_directories(... PRIVATE ${RATL_INCLUDE_DIRS})
 target_link_libraries(... PRIVATE ${RATL_LIBRARIES})
 ```
 
+### 5. Include RATL's headers
+
+```c
+#include <atlbase.h>
+#include <atlstr.h>
+...
+```
+
+### 6. Enjoy RATL programming
+
+Period.
+
 ## License
 
 - LGPL 2.1 or later
 
-## Contact me
+## Contact Us
 
 - katayama.hirofumi.mz@gmail.com
