@@ -1,5 +1,5 @@
 #!/bin/bash
-cp -r atl/*.h ../reactos/sdk/lib/atl
+cp -r include/atl/*.h ../reactos/sdk/lib/atl
 cp -r atltests/*.bmp ../reactos/modules/rostests/apitests/atl
 cp -r atltests/*.cpp ../reactos/modules/rostests/apitests/atl
 cp -r atltests/*.inl ../reactos/modules/rostests/apitests/atl
