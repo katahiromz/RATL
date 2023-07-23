@@ -4,7 +4,7 @@ This is an "Active Template Library" clone. Feedback is welcome.
 
 ## Requirements
 
-- Win32/C/C++ and CMake
+- Win32/C/C++ compilers and CMake
 
 ## How to use RATL
 
