@@ -46,6 +46,10 @@ target_include_directories(... PRIVATE ${RATL_INCLUDE_DIRS})
 target_link_libraries(... PRIVATE ${RATL_LIBRARIES})
 ```
 
-### Contact me
+## License
+
+- LGPL 2.1 or later
+
+## Contact me
 
 - katayama.hirofumi.mz@gmail.com
