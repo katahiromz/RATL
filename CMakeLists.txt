@@ -2,7 +2,7 @@
 ##############################################################################
 
 # CMake minimum version
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 # enable testing
 enable_testing()
@@ -22,7 +22,8 @@ check_include_file_cxx(excpt.h HAVE_EXCPT_H)
 # RATL settings
 
 # RATL_DEFINITIONS
-set(RATL_DEFINITIONS -DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG -DHAVE_APITEST -D_USE_PSEH3 -D__RATL__)
+set(RATL_DEFINITIONS -DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG -DHAVE_APITEST -D_USE_PSEH3 )
+set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D__RATL__ -D_CRT_NON_CONFORMING_SWPRINTFS)
 if(MSVC)
     set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D__MINGW_ATTRIB_UNUSED= -D_CRT_SECURE_NO_WARNINGS -D_NEW=)
 else()

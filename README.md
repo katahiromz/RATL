@@ -22,7 +22,13 @@ Or:
 git submodule add https://github.com/katahiromz/RATL
 ```
 
-### 2. Add definitions `${RATL_DEFINITIONS}`
+### 2. Add subdirectory if it is CMake submodule
+
+```txt
+add_subdirectory(RATL)
+```
+
+### 3. Add definitions `${RATL_DEFINITIONS}`
 
 ```txt
 add_definitions(${RATL_DEFINITIONS})
@@ -34,7 +40,7 @@ Or:
 target_compile_definitions(... PRIVATE ${RATL_DEFINITIONS})
 ```
 
-### 3. Add include directories `${RATL_INCLUDE_DIRS}`
+### 4. Add include directories `${RATL_INCLUDE_DIRS}`
 
 ```txt
 include_directories(${RATL_INCLUDE_DIRS})
@@ -46,13 +52,13 @@ Or:
 target_include_directories(... PRIVATE ${RATL_INCLUDE_DIRS})
 ```
 
-### 4. Link `${RATL_LIBRARIES}`
+### 5. Link `${RATL_LIBRARIES}`
 
 ```txt
 target_link_libraries(... PRIVATE ${RATL_LIBRARIES})
 ```
 
-### 5. Include RATL's headers
+### 6. Include RATL's headers
 
 ```c
 #include <atlbase.h>
@@ -60,7 +66,7 @@ target_link_libraries(... PRIVATE ${RATL_LIBRARIES})
 ...
 ```
 
-### 6. Enjoy RATL programming
+### 7. Enjoy RATL programming
 
 Period.
 
