@@ -59,7 +59,7 @@ if(NOT(HAVE_EXCPT_H))
 endif()
 
 # RATL_LIBRARIES
-set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrt kernel32)
+set(RATL_LIBRARIES uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrt kernel32 crtcompat)
 
 ##############################################################################
 

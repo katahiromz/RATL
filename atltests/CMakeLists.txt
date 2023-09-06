@@ -21,6 +21,10 @@ add_executable(atl_apitest
     testlist.c
     atl_apitest.rc)
 
+message(STATUS "RATL_DEFINITIONS: ${RATL_DEFINITIONS}")
+message(STATUS "RATL_INCLUDE_DIRS: ${RATL_INCLUDE_DIRS}")
+message(STATUS "RATL_LIBRARIES: ${RATL_LIBRARIES}")
+
 target_compile_definitions(atl_apitest PRIVATE ${RATL_DEFINITIONS})
 target_include_directories(atl_apitest PRIVATE ${RATL_INCLUDE_DIRS})
 target_link_libraries(atl_apitest PRIVATE ${RATL_LIBRARIES})
