@@ -23,12 +23,8 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
-#ifdef __RATL__
-#include <windows.h>
-#else
 #include <windef.h>
 #include <winbase.h>
-#endif
 
 #ifdef __WINE_CONFIG_H
 #error config.h should not be used in Wine tests

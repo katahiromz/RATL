@@ -6,15 +6,6 @@
 #ifndef __ATLIMAGE_H__
 #define __ATLIMAGE_H__
 
-// !!!!
-// TODO: The backend (gdi+) that this class relies on is not yet complete!
-//       Before that is finished, this class will not be a perfect replacement.
-//       See rostest/apitests/atl/CImage_WIP.txt for test results.
-// !!!!
-
-// TODO: CImage::Load, CImage::Save
-// TODO: make CImage thread-safe
-
 #pragma once
 
 #include <atlcore.h>        // for ATL Core
@@ -46,80 +37,93 @@ public:
         DIBOR_TOPDOWN               // top-down DIB
     };
 
-    CImage() throw()
+    CImage() noexcept
     {
-        m_hbm = NULL;
-        m_hbmOld = NULL;
+        m_hBitmap = NULL;
+        m_hOldBitmap = NULL;
         m_hDC = NULL;
 
         m_eOrientation = DIBOR_DEFAULT;
-        m_bHasAlphaCh = false;
-        m_bIsDIBSec = false;
-        m_rgbTransColor = CLR_INVALID;
+        m_bHasAlphaChannel = false;
+        m_bIsDIBSection = false;
+        m_clrTransparentColor = CLR_INVALID;
         ZeroMemory(&m_ds, sizeof(m_ds));
 
-        if (GetCommon().AddRef() == 1)
-        {
-            GetCommon().LoadLib();
-        }
+        s_gdiplus.IncreaseCImageCount();
     }
 
-    ~CImage()
+    virtual ~CImage() noexcept
     {
         Destroy();
-        ReleaseGDIPlus();
+        s_gdiplus.DecreaseCImageCount();
     }
 
-    operator HBITMAP()
+    operator HBITMAP() noexcept
     {
-        return m_hbm;
+        return m_hBitmap;
     }
 
-public:
-    void Attach(HBITMAP hBitmap, DIBOrientation eOrientation = DIBOR_DEFAULT)
+    static void ReleaseGDIPlus()
+    {
+        s_gdiplus.ReleaseGDIPlus();
+    }
+
+    void Attach(HBITMAP hBitmap, DIBOrientation eOrientation = DIBOR_DEFAULT) noexcept
     {
         AttachInternal(hBitmap, eOrientation, -1);
     }
 
-    HBITMAP Detach() throw()
+    HBITMAP Detach() noexcept
     {
         m_eOrientation = DIBOR_DEFAULT;
-        m_bHasAlphaCh = false;
-        m_rgbTransColor = CLR_INVALID;
+        m_bHasAlphaChannel = false;
+        m_clrTransparentColor = CLR_INVALID;
         ZeroMemory(&m_ds, sizeof(m_ds));
 
-        HBITMAP hBitmap = m_hbm;
-        m_hbm = NULL;
+        HBITMAP hBitmap = m_hBitmap;
+        m_hBitmap = NULL;
         return hBitmap;
     }
 
-    HDC GetDC() const throw()
+    HDC GetDC() const noexcept
     {
-        if (m_hDC)
-            return m_hDC;
+        ATLASSERT(m_nDCRefCount >= 0);
+        if (::InterlockedIncrement(&m_nDCRefCount) == 1)
+        {
+            ATLASSERT(m_hDC == NULL);
+            ATLASSERT(m_hOldBitmap == NULL);
 
-        m_hDC = ::CreateCompatibleDC(NULL);
-        m_hbmOld = ::SelectObject(m_hDC, m_hbm);
+            m_hDC = ::CreateCompatibleDC(NULL);
+            ATLASSERT(m_hDC != NULL);
+
+            m_hOldBitmap = (HBITMAP)::SelectObject(m_hDC, m_hBitmap);
+            ATLASSERT(m_hOldBitmap != NULL);
+        }
+
         return m_hDC;
     }
 
-    void ReleaseDC() const throw()
+    void ReleaseDC() const noexcept
     {
-        ATLASSERT(m_hDC);
+        ATLASSERT(m_nDCRefCount > 0);
 
-        if (m_hDC == NULL)
+        if (::InterlockedDecrement(&m_nDCRefCount) != 0)
             return;
 
-        if (m_hbmOld)
+        if (m_hOldBitmap)
         {
-            ::SelectObject(m_hDC, m_hbmOld);
-            m_hbmOld = NULL;
+            ATLASSERT(m_hDC != NULL);
+            ::SelectObject(m_hDC, m_hOldBitmap);
+            m_hOldBitmap = NULL;
         }
-        ::DeleteDC(m_hDC);
-        m_hDC = NULL;
+
+        if (m_hDC)
+        {
+            ::DeleteDC(m_hDC);
+            m_hDC = NULL;
+        }
     }
 
-public:
     BOOL AlphaBlend(HDC hDestDC,
         int xDest, int yDest, int nDestWidth, int nDestHeight,
         int xSrc, int ySrc, int nSrcWidth, int nSrcHeight,
@@ -166,7 +170,7 @@ public:
 
     BOOL BitBlt(HDC hDestDC, int xDest, int yDest,
                 int nDestWidth, int nDestHeight,
-                int xSrc, int ySrc, DWORD dwROP = SRCCOPY) const throw()
+                int xSrc, int ySrc, DWORD dwROP = SRCCOPY) const noexcept
     {
         GetDC();
         BOOL ret = ::BitBlt(hDestDC, xDest, yDest, nDestWidth, nDestHeight,
@@ -175,18 +179,18 @@ public:
         return ret;
     }
     BOOL BitBlt(HDC hDestDC, int xDest, int yDest,
-                DWORD dwROP = SRCCOPY) const throw()
+                DWORD dwROP = SRCCOPY) const noexcept
     {
         return BitBlt(hDestDC, xDest, yDest,
                       GetWidth(), GetHeight(), 0, 0, dwROP);
     }
     BOOL BitBlt(HDC hDestDC, const POINT& pointDest,
-                DWORD dwROP = SRCCOPY) const throw()
+                DWORD dwROP = SRCCOPY) const noexcept
     {
         return BitBlt(hDestDC, pointDest.x, pointDest.y, dwROP);
     }
     BOOL BitBlt(HDC hDestDC, const RECT& rectDest, const POINT& pointSrc,
-                DWORD dwROP = SRCCOPY) const throw()
+                DWORD dwROP = SRCCOPY) const noexcept
     {
         return BitBlt(hDestDC, rectDest.left, rectDest.top,
                       rectDest.right - rectDest.left,
@@ -194,41 +198,41 @@ public:
                       pointSrc.x, pointSrc.y, dwROP);
     }
 
-    BOOL Create(int nWidth, int nHeight, int nBPP, DWORD dwFlags = 0) throw()
+    BOOL Create(int nWidth, int nHeight, int nBPP, DWORD dwFlags = 0) noexcept
     {
         return CreateEx(nWidth, nHeight, nBPP, BI_RGB, NULL, dwFlags);
     }
 
     BOOL CreateEx(int nWidth, int nHeight, int nBPP, DWORD eCompression,
-                  const DWORD* pdwBitmasks = NULL, DWORD dwFlags = 0) throw()
+                  const DWORD* pdwBitmasks = NULL, DWORD dwFlags = 0) noexcept
     {
         return CreateInternal(nWidth, nHeight, nBPP, eCompression, pdwBitmasks, dwFlags);
     }
 
-    void Destroy() throw()
+    void Destroy() noexcept
     {
-        if (m_hbm)
+        if (m_hBitmap)
         {
             ::DeleteObject(Detach());
         }
     }
 
     BOOL Draw(HDC hDestDC, int xDest, int yDest, int nDestWidth, int nDestHeight,
-              int xSrc, int ySrc, int nSrcWidth, int nSrcHeight) const throw()
+              int xSrc, int ySrc, int nSrcWidth, int nSrcHeight) const noexcept
     {
         ATLASSERT(IsTransparencySupported());
-        if (m_bHasAlphaCh)
+        if (m_bHasAlphaChannel)
         {
             return AlphaBlend(hDestDC, xDest, yDest, nDestWidth, nDestHeight,
                               xSrc, ySrc, nSrcWidth, nSrcHeight);
         }
-        else if (m_rgbTransColor != CLR_INVALID)
+        else if (m_clrTransparentColor != CLR_INVALID)
         {
             COLORREF rgb;
-            if ((m_rgbTransColor & 0xFF000000) == 0x01000000)
-                rgb = RGBFromPaletteIndex(m_rgbTransColor & 0xFF);
+            if ((m_clrTransparentColor & 0xFF000000) == 0x01000000)
+                rgb = RGBFromPaletteIndex(m_clrTransparentColor & 0xFF);
             else
-                rgb = m_rgbTransColor;
+                rgb = m_clrTransparentColor;
             return TransparentBlt(hDestDC, xDest, yDest, nDestWidth, nDestHeight,
                                   xSrc, ySrc, nSrcWidth, nSrcHeight, rgb);
         }
@@ -238,7 +242,7 @@ public:
                               xSrc, ySrc, nSrcWidth, nSrcHeight);
         }
     }
-    BOOL Draw(HDC hDestDC, const RECT& rectDest, const RECT& rectSrc) const throw()
+    BOOL Draw(HDC hDestDC, const RECT& rectDest, const RECT& rectSrc) const noexcept
     {
         return Draw(hDestDC, rectDest.left, rectDest.top,
                     rectDest.right - rectDest.left,
@@ -247,28 +251,28 @@ public:
                     rectSrc.right - rectSrc.left,
                     rectSrc.bottom - rectSrc.top);
     }
-    BOOL Draw(HDC hDestDC, int xDest, int yDest) const throw()
+    BOOL Draw(HDC hDestDC, int xDest, int yDest) const noexcept
     {
         return Draw(hDestDC, xDest, yDest, GetWidth(), GetHeight());
     }
-    BOOL Draw(HDC hDestDC, const POINT& pointDest) const throw()
+    BOOL Draw(HDC hDestDC, const POINT& pointDest) const noexcept
     {
         return Draw(hDestDC, pointDest.x, pointDest.y);
     }
     BOOL Draw(HDC hDestDC, int xDest, int yDest,
-              int nDestWidth, int nDestHeight) const throw()
+              int nDestWidth, int nDestHeight) const noexcept
     {
         return Draw(hDestDC, xDest, yDest, nDestWidth, nDestHeight,
                     0, 0, GetWidth(), GetHeight());
     }
-    BOOL Draw(HDC hDestDC, const RECT& rectDest) const throw()
+    BOOL Draw(HDC hDestDC, const RECT& rectDest) const noexcept
     {
         return Draw(hDestDC, rectDest.left, rectDest.top,
                     rectDest.right - rectDest.left,
                     rectDest.bottom - rectDest.top);
     }
 
-    void *GetBits() throw()
+    void *GetBits() noexcept
     {
         ATLASSERT(IsDIBSection());
         BYTE *pb = (BYTE *)m_bm.bmBits;
@@ -279,14 +283,14 @@ public:
         return pb;
     }
 
-    int GetBPP() const throw()
+    int GetBPP() const noexcept
     {
-        ATLASSERT(m_hbm);
+        ATLASSERT(m_hBitmap);
         return m_bm.bmBitsPixel;
     }
 
     void GetColorTable(UINT iFirstColor, UINT nColors,
-                       RGBQUAD* prgbColors) const throw()
+                       RGBQUAD* prgbColors) const noexcept
     {
         ATLASSERT(IsDIBSection());
         GetDC();
@@ -294,13 +298,13 @@ public:
         ReleaseDC();
     }
 
-    int GetHeight() const throw()
+    int GetHeight() const noexcept
     {
-        ATLASSERT(m_hbm);
+        ATLASSERT(m_hBitmap);
         return m_bm.bmHeight;
     }
 
-    int GetMaxColorTableEntries() const throw()
+    int GetMaxColorTableEntries() const noexcept
     {
         ATLASSERT(IsDIBSection());
         if (m_ds.dsBmih.biClrUsed && m_ds.dsBmih.biBitCount < 16)
@@ -320,7 +324,7 @@ public:
         }
     }
 
-    int GetPitch() const throw()
+    int GetPitch() const noexcept
     {
         ATLASSERT(IsDIBSection());
         if (m_eOrientation == DIBOR_BOTTOMUP)
@@ -329,7 +333,7 @@ public:
             return m_bm.bmWidthBytes;
     }
 
-    COLORREF GetPixel(int x, int y) const throw()
+    COLORREF GetPixel(int x, int y) const noexcept
     {
         GetDC();
         COLORREF ret = ::GetPixel(m_hDC, x, y);
@@ -337,7 +341,7 @@ public:
         return ret;
     }
 
-    void* GetPixelAddress(int x, int y) throw()
+    void* GetPixelAddress(int x, int y) noexcept
     {
         ATLASSERT(IsDIBSection());
         BYTE *pb = (BYTE *)GetBits();
@@ -346,85 +350,83 @@ public:
         return pb;
     }
 
-    COLORREF GetTransparentColor() const throw()
+    COLORREF GetTransparentColor() const noexcept
     {
-        return m_rgbTransColor;
+        return m_clrTransparentColor;
     }
 
-    int GetWidth() const throw()
+    int GetWidth() const noexcept
     {
-        ATLASSERT(m_hbm);
+        ATLASSERT(m_hBitmap);
         return m_bm.bmWidth;
     }
 
-    bool IsDIBSection() const throw()
+    bool IsDIBSection() const noexcept
     {
-        ATLASSERT(m_hbm);
-        return m_bIsDIBSec;
+        ATLASSERT(m_hBitmap);
+        return m_bIsDIBSection;
     }
 
-    bool IsIndexed() const throw()
+    bool IsIndexed() const noexcept
     {
         ATLASSERT(IsDIBSection());
         return GetBPP() <= 8;
     }
 
-    bool IsNull() const throw()
+    bool IsNull() const noexcept
     {
-        return m_hbm == NULL;
+        return m_hBitmap == NULL;
     }
 
-    HRESULT Load(LPCTSTR pszFileName) throw()
+    HRESULT Load(LPCTSTR pszFileName) noexcept
     {
+        if (!InitGDIPlus())
+            return E_FAIL;
+
         // convert the file name string into Unicode
         CStringW pszNameW(pszFileName);
 
         // create a GpBitmap object from file
         using namespace Gdiplus;
         GpBitmap *pBitmap = NULL;
-        if (GetCommon().CreateBitmapFromFile(pszNameW, &pBitmap) != Ok)
+        if (s_gdiplus.CreateBitmapFromFile(pszNameW, &pBitmap) != Ok)
         {
             return E_FAIL;
         }
 
-        // TODO & FIXME: get parameters (m_rgbTransColor etc.)
-
         // get bitmap handle
         HBITMAP hbm = NULL;
         Color color(0xFF, 0xFF, 0xFF);
-        Gdiplus::Status status;
-        status = GetCommon().CreateHBITMAPFromBitmap(
-            pBitmap, &hbm, color.GetValue());
+        Status status = s_gdiplus.CreateHBITMAPFromBitmap(pBitmap, &hbm, color.GetValue());
 
         // delete GpBitmap
-        GetCommon().DisposeImage(pBitmap);
+        s_gdiplus.DisposeImage(pBitmap);
 
         // attach it
         if (status == Ok)
             Attach(hbm);
         return (status == Ok ? S_OK : E_FAIL);
     }
-    HRESULT Load(IStream* pStream) throw()
+    HRESULT Load(IStream* pStream) noexcept
     {
+        if (!InitGDIPlus())
+            return E_FAIL;
+
         // create GpBitmap from stream
         using namespace Gdiplus;
         GpBitmap *pBitmap = NULL;
-        if (GetCommon().CreateBitmapFromStream(pStream, &pBitmap) != Ok)
+        if (s_gdiplus.CreateBitmapFromStream(pStream, &pBitmap) != Ok)
         {
             return E_FAIL;
         }
 
-        // TODO & FIXME: get parameters (m_rgbTransColor etc.)
-
         // get bitmap handle
         HBITMAP hbm = NULL;
         Color color(0xFF, 0xFF, 0xFF);
-        Gdiplus::Status status;
-        status = GetCommon().CreateHBITMAPFromBitmap(
-            pBitmap, &hbm, color.GetValue());
+        Status status = s_gdiplus.CreateHBITMAPFromBitmap(pBitmap, &hbm, color.GetValue());
 
         // delete Bitmap
-        GetCommon().DisposeImage(pBitmap);
+        s_gdiplus.DisposeImage(pBitmap);
 
         // attach it
         if (status == Ok)
@@ -433,13 +435,13 @@ public:
     }
 
     // NOTE: LoadFromResource loads BITMAP resource only
-    void LoadFromResource(HINSTANCE hInstance, LPCTSTR pszResourceName) throw()
+    void LoadFromResource(HINSTANCE hInstance, LPCTSTR pszResourceName) noexcept
     {
         HANDLE hHandle = ::LoadImage(hInstance, pszResourceName,
                                      IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
         Attach(reinterpret_cast<HBITMAP>(hHandle));
     }
-    void LoadFromResource(HINSTANCE hInstance, UINT nIDResource) throw()
+    void LoadFromResource(HINSTANCE hInstance, UINT nIDResource) noexcept
     {
         LoadFromResource(hInstance, MAKEINTRESOURCE(nIDResource));
     }
@@ -447,7 +449,7 @@ public:
     BOOL MaskBlt(HDC hDestDC, int xDest, int yDest,
                  int nDestWidth, int nDestHeight, int xSrc, int ySrc,
                  HBITMAP hbmMask, int xMask, int yMask,
-                 DWORD dwROP = SRCCOPY) const throw()
+                 DWORD dwROP = SRCCOPY) const noexcept
     {
         ATLASSERT(IsTransparencySupported());
         GetDC();
@@ -459,20 +461,20 @@ public:
     }
     BOOL MaskBlt(HDC hDestDC, const RECT& rectDest, const POINT& pointSrc,
                  HBITMAP hbmMask, const POINT& pointMask,
-                 DWORD dwROP = SRCCOPY) const throw()
+                 DWORD dwROP = SRCCOPY) const noexcept
     {
         return MaskBlt(hDestDC, rectDest.left, rectDest.top,
             rectDest.right - rectDest.left, rectDest.bottom - rectDest.top,
             pointSrc.x, pointSrc.y, hbmMask, pointMask.x, pointMask.y, dwROP);
     }
     BOOL MaskBlt(HDC hDestDC, int xDest, int yDest,
-                 HBITMAP hbmMask, DWORD dwROP = SRCCOPY) const throw()
+                 HBITMAP hbmMask, DWORD dwROP = SRCCOPY) const noexcept
     {
         return MaskBlt(hDestDC, xDest, yDest, GetWidth(), GetHeight(),
                        0, 0, hbmMask, 0, 0, dwROP);
     }
     BOOL MaskBlt(HDC hDestDC, const POINT& pointDest,
-                 HBITMAP hbmMask, DWORD dwROP = SRCCOPY) const throw()
+                 HBITMAP hbmMask, DWORD dwROP = SRCCOPY) const noexcept
     {
         return MaskBlt(hDestDC, pointDest.x, pointDest.y, hbmMask, dwROP);
     }
@@ -480,7 +482,7 @@ public:
     BOOL PlgBlt(HDC hDestDC, const POINT* pPoints,
                 int xSrc, int ySrc, int nSrcWidth, int nSrcHeight,
                 HBITMAP hbmMask = NULL,
-                int xMask = 0, int yMask = 0) const throw()
+                int xMask = 0, int yMask = 0) const noexcept
     {
         ATLASSERT(IsTransparencySupported());
         GetDC();
@@ -491,99 +493,99 @@ public:
         return ret;
     }
     BOOL PlgBlt(HDC hDestDC, const POINT* pPoints,
-                HBITMAP hbmMask = NULL) const throw()
+                HBITMAP hbmMask = NULL) const noexcept
     {
         return PlgBlt(hDestDC, pPoints, 0, 0, GetWidth(), GetHeight(),
                       hbmMask);
     }
     BOOL PlgBlt(HDC hDestDC, const POINT* pPoints, const RECT& rectSrc,
-                HBITMAP hbmMask, const POINT& pointMask) const throw()
+                HBITMAP hbmMask, const POINT& pointMask) const noexcept
     {
         return PlgBlt(hDestDC, pPoints, rectSrc.left, rectSrc.top,
             rectSrc.right - rectSrc.left, rectSrc.bottom - rectSrc.top,
             hbmMask, pointMask.x, pointMask.y);
     }
     BOOL PlgBlt(HDC hDestDC, const POINT* pPoints, const RECT& rectSrc,
-                HBITMAP hbmMask = NULL) const throw()
+                HBITMAP hbmMask = NULL) const noexcept
     {
         POINT pointMask = {0, 0};
         return PlgBlt(hDestDC, pPoints, rectSrc, hbmMask, pointMask);
     }
 
-    void ReleaseGDIPlus() throw()
+    HRESULT Save(IStream* pStream, GUID *guidFileType) const noexcept
     {
-        COMMON*& pCommon = GetCommonPtr();
-        if (pCommon && pCommon->Release() == 0)
-        {
-            delete pCommon;
-            pCommon = NULL;
-        }
-    }
-
-    HRESULT Save(IStream* pStream, GUID *guidFileType) const throw()
-    {
-        using namespace Gdiplus;
-        ATLASSERT(m_hbm);
-
-        // TODO & FIXME: set parameters (m_rgbTransColor etc.)
-        CLSID clsid;
-        if (!GetClsidFromFileType(&clsid, guidFileType))
+        if (!InitGDIPlus())
             return E_FAIL;
+
+        using namespace Gdiplus;
+        ATLASSERT(m_hBitmap);
+
+        // Get encoders
+        UINT cEncoders = 0;
+        ImageCodecInfo* pEncoders = _getAllEncoders(cEncoders);
+
+        // Get Codec
+        CLSID clsid = FindCodecForFileType(*guidFileType, pEncoders, cEncoders);
+        delete[] pEncoders;
 
         // create a GpBitmap from HBITMAP
         GpBitmap *pBitmap = NULL;
-        GetCommon().CreateBitmapFromHBITMAP(m_hbm, NULL, &pBitmap);
+        s_gdiplus.CreateBitmapFromHBITMAP(m_hBitmap, NULL, &pBitmap);
 
         // save to stream
         Status status;
-        status = GetCommon().SaveImageToStream(pBitmap, pStream, &clsid, NULL);
+        status = s_gdiplus.SaveImageToStream(pBitmap, pStream, &clsid, NULL);
 
         // destroy GpBitmap
-        GetCommon().DisposeImage(pBitmap);
+        s_gdiplus.DisposeImage(pBitmap);
 
         return (status == Ok ? S_OK : E_FAIL);
     }
 
     HRESULT Save(LPCTSTR pszFileName,
-                 REFGUID guidFileType = GUID_NULL) const throw()
+                 REFGUID guidFileType = GUID_NULL) const noexcept
     {
-        using namespace Gdiplus;
-        ATLASSERT(m_hbm);
+        if (!InitGDIPlus())
+            return E_FAIL;
 
-        // TODO & FIXME: set parameters (m_rgbTransColor etc.)
+        using namespace Gdiplus;
+        ATLASSERT(m_hBitmap);
 
         // convert the file name string into Unicode
         CStringW pszNameW(pszFileName);
 
+        // Get encoders
+        UINT cEncoders = 0;
+        ImageCodecInfo* pEncoders = _getAllEncoders(cEncoders);
+
         // if the file type is null, get the file type from extension
-        const GUID *FileType = &guidFileType;
+        CLSID clsid;
         if (::IsEqualGUID(guidFileType, GUID_NULL))
         {
-            LPCWSTR pszExt = GetFileExtension(pszNameW);
-            FileType = FileTypeFromExtension(pszExt);
+            CString strExt(GetFileExtension(pszNameW));
+            clsid = FindCodecForExtension(strExt, pEncoders, cEncoders);
         }
-
-        // get CLSID from file type
-        CLSID clsid;
-        if (!GetClsidFromFileType(&clsid, FileType))
-            return E_FAIL;
+        else
+        {
+            clsid = FindCodecForFileType(guidFileType, pEncoders, cEncoders);
+        }
+        delete[] pEncoders;
 
         // create a GpBitmap from HBITMAP
         GpBitmap *pBitmap = NULL;
-        GetCommon().CreateBitmapFromHBITMAP(m_hbm, NULL, &pBitmap);
+        s_gdiplus.CreateBitmapFromHBITMAP(m_hBitmap, NULL, &pBitmap);
 
         // save to file
-        Status status;
-        status = GetCommon().SaveImageToFile(pBitmap, pszNameW, &clsid, NULL);
+        Status status = s_gdiplus.SaveImageToFile(pBitmap, pszNameW, &clsid, NULL);
 
         // destroy GpBitmap
-        GetCommon().DisposeImage(pBitmap);
+        s_gdiplus.DisposeImage(pBitmap);
 
         return (status == Ok ? S_OK : E_FAIL);
     }
 
     void SetColorTable(UINT iFirstColor, UINT nColors,
-                       const RGBQUAD* prgbColors) throw()
+                       const RGBQUAD* prgbColors) noexcept
     {
         ATLASSERT(IsDIBSection());
         GetDC();
@@ -591,14 +593,14 @@ public:
         ReleaseDC();
     }
 
-    void SetPixel(int x, int y, COLORREF color) throw()
+    void SetPixel(int x, int y, COLORREF color) noexcept
     {
         GetDC();
         ::SetPixelV(m_hDC, x, y, color);
         ReleaseDC();
     }
 
-    void SetPixelIndexed(int x, int y, int iIndex) throw()
+    void SetPixelIndexed(int x, int y, int iIndex) noexcept
     {
         ATLASSERT(IsIndexed());
         GetDC();
@@ -606,23 +608,23 @@ public:
         ReleaseDC();
     }
 
-    void SetPixelRGB(int x, int y, BYTE r, BYTE g, BYTE b) throw()
+    void SetPixelRGB(int x, int y, BYTE r, BYTE g, BYTE b) noexcept
     {
         SetPixel(x, y, RGB(r, g, b));
     }
 
-    COLORREF SetTransparentColor(COLORREF rgbTransparent) throw()
+    COLORREF SetTransparentColor(COLORREF rgbTransparent) noexcept
     {
-        ATLASSERT(m_hbm);
-        COLORREF rgbOldColor = m_rgbTransColor;
-        m_rgbTransColor = rgbTransparent;
+        ATLASSERT(m_hBitmap);
+        COLORREF rgbOldColor = m_clrTransparentColor;
+        m_clrTransparentColor = rgbTransparent;
         return rgbOldColor;
     }
 
     BOOL StretchBlt(HDC hDestDC, int xDest, int yDest,
                     int nDestWidth, int nDestHeight,
                     int xSrc, int ySrc, int nSrcWidth, int nSrcHeight,
-                    DWORD dwROP = SRCCOPY) const throw()
+                    DWORD dwROP = SRCCOPY) const noexcept
     {
         GetDC();
         BOOL ret = ::StretchBlt(hDestDC, xDest, yDest, nDestWidth, nDestHeight,
@@ -632,20 +634,20 @@ public:
     }
     BOOL StretchBlt(HDC hDestDC, int xDest, int yDest,
                     int nDestWidth, int nDestHeight,
-                    DWORD dwROP = SRCCOPY) const throw()
+                    DWORD dwROP = SRCCOPY) const noexcept
     {
         return StretchBlt(hDestDC, xDest, yDest, nDestWidth, nDestHeight,
                           0, 0, GetWidth(), GetHeight(), dwROP);
     }
     BOOL StretchBlt(HDC hDestDC, const RECT& rectDest,
-                    DWORD dwROP = SRCCOPY) const throw()
+                    DWORD dwROP = SRCCOPY) const noexcept
     {
         return StretchBlt(hDestDC, rectDest.left, rectDest.top,
                           rectDest.right - rectDest.left,
                           rectDest.bottom - rectDest.top, dwROP);
     }
     BOOL StretchBlt(HDC hDestDC, const RECT& rectDest,
-                    const RECT& rectSrc, DWORD dwROP = SRCCOPY) const throw()
+                    const RECT& rectSrc, DWORD dwROP = SRCCOPY) const noexcept
     {
         return StretchBlt(hDestDC, rectDest.left, rectDest.top,
                           rectDest.right - rectDest.left,
@@ -658,7 +660,7 @@ public:
     BOOL TransparentBlt(HDC hDestDC, int xDest, int yDest,
                         int nDestWidth, int nDestHeight,
                         int xSrc, int ySrc, int nSrcWidth, int nSrcHeight,
-                        UINT crTransparent = CLR_INVALID) const throw()
+                        UINT crTransparent = CLR_INVALID) const noexcept
     {
         ATLASSERT(IsTransparencySupported());
         GetDC();
@@ -671,13 +673,13 @@ public:
     }
     BOOL TransparentBlt(HDC hDestDC, int xDest, int yDest,
                         int nDestWidth, int nDestHeight,
-                        UINT crTransparent = CLR_INVALID) const throw()
+                        UINT crTransparent = CLR_INVALID) const noexcept
     {
         return TransparentBlt(hDestDC, xDest, yDest, nDestWidth, nDestHeight,
                               0, 0, GetWidth(), GetHeight(), crTransparent);
     }
     BOOL TransparentBlt(HDC hDestDC, const RECT& rectDest,
-                        UINT crTransparent = CLR_INVALID) const throw()
+                        UINT crTransparent = CLR_INVALID) const noexcept
     {
         return TransparentBlt(hDestDC, rectDest.left, rectDest.top,
                               rectDest.right - rectDest.left,
@@ -685,7 +687,7 @@ public:
     }
     BOOL TransparentBlt(
        HDC hDestDC, const RECT& rectDest,
-       const RECT& rectSrc, UINT crTransparent = CLR_INVALID) const throw()
+       const RECT& rectSrc, UINT crTransparent = CLR_INVALID) const noexcept
     {
         return TransparentBlt(hDestDC, rectDest.left, rectDest.top,
             rectDest.right - rectDest.left, rectDest.bottom - rectDest.left,
@@ -693,8 +695,7 @@ public:
             rectSrc.bottom - rectSrc.top, crTransparent);
     }
 
-public:
-    static BOOL IsTransparencySupported() throw()
+    static BOOL IsTransparencySupported() noexcept
     {
         return TRUE;
     }
@@ -714,73 +715,90 @@ public:
         excludeDefaultSave  = excludeIcon | excludeEMF | excludeWMF
     };
 
-    struct FILTER_DATA {
-        DWORD dwExclude;
-        const TCHAR *title;
-        const TCHAR *extensions;
-        const GUID *guid;
-    };
+private:
+    static bool ShouldExcludeFormat(REFGUID guidFileType, DWORD dwExclude)
+    {
+        if (::IsEqualGUID(guidFileType, Gdiplus::ImageFormatGIF))
+            return !!(dwExclude & excludeGIF);
+        if (::IsEqualGUID(guidFileType, Gdiplus::ImageFormatBMP))
+            return !!(dwExclude & excludeBMP);
+        if (::IsEqualGUID(guidFileType, Gdiplus::ImageFormatEMF))
+            return !!(dwExclude & excludeEMF);
+        if (::IsEqualGUID(guidFileType, Gdiplus::ImageFormatWMF))
+            return !!(dwExclude & excludeWMF);
+        if (::IsEqualGUID(guidFileType, Gdiplus::ImageFormatJPEG))
+            return !!(dwExclude & excludeJPEG);
+        if (::IsEqualGUID(guidFileType, Gdiplus::ImageFormatPNG))
+            return !!(dwExclude & excludePNG);
+        if (::IsEqualGUID(guidFileType, Gdiplus::ImageFormatTIFF))
+            return !!(dwExclude & excludeTIFF);
+        if (::IsEqualGUID(guidFileType, Gdiplus::ImageFormatIcon))
+            return !!(dwExclude & excludeIcon);
+        return ((dwExclude & excludeOther) == excludeOther);
+    }
 
-protected:
-    static HRESULT GetCommonFilterString(
+    static HRESULT BuildCodecFilterString(
+        const Gdiplus::ImageCodecInfo* pCodecs,
+        UINT cCodecs,
         CSimpleString& strFilter,
         CSimpleArray<GUID>& aguidFileTypes,
         LPCTSTR pszAllFilesDescription,
         DWORD dwExclude,
         TCHAR chSeparator)
     {
-        static const FILTER_DATA table[] =
+        if (!pCodecs || !cCodecs)
         {
-            {excludeBMP, TEXT("BMP"), TEXT("*.BMP;*.DIB;*.RLE"), &Gdiplus::ImageFormatBMP},
-            {excludeJPEG, TEXT("JPEG"), TEXT("*.JPG;*.JPEG;*.JPE;*.JFIF"), &Gdiplus::ImageFormatJPEG},
-            {excludeGIF, TEXT("GIF"), TEXT("*.GIF"), &Gdiplus::ImageFormatGIF},
-            {excludeEMF, TEXT("EMF"), TEXT("*.EMF"), &Gdiplus::ImageFormatEMF},
-            {excludeWMF, TEXT("WMF"), TEXT("*.WMF"), &Gdiplus::ImageFormatWMF},
-            {excludeTIFF, TEXT("TIFF"), TEXT("*.TIF;*.TIFF"), &Gdiplus::ImageFormatTIFF},
-            {excludePNG, TEXT("PNG"), TEXT("*.PNG"), &Gdiplus::ImageFormatPNG},
-            {excludeIcon, TEXT("ICO"), TEXT("*.ICO"), &Gdiplus::ImageFormatIcon}
-        };
+            strFilter += chSeparator;
+            return E_FAIL;
+        }
 
         if (pszAllFilesDescription)
         {
             strFilter += pszAllFilesDescription;
-            strFilter += chSeparator;
 
             BOOL bFirst = TRUE;
-            for (size_t i = 0; i < _countof(table); ++i)
+            CString extensions;
+            for (UINT i = 0; i < cCodecs; ++i)
             {
-                if ((dwExclude & table[i].dwExclude) != 0)
+                if (ShouldExcludeFormat(pCodecs[i].FormatID, dwExclude))
                     continue;
 
                 if (bFirst)
                     bFirst = FALSE;
                 else
-                    strFilter += TEXT(';');
+                    extensions += TEXT(';');
 
-                strFilter += table[i].extensions;
+                CString ext(pCodecs[i].FilenameExtension);
+                extensions += ext;
             }
+
+            strFilter += chSeparator;
+            strFilter += extensions;
             strFilter += chSeparator;
 
             aguidFileTypes.Add(GUID_NULL);
         }
 
-        for (size_t i = 0; i < _countof(table); ++i)
+        for (UINT i = 0; i < cCodecs; ++i)
         {
-            if ((dwExclude & table[i].dwExclude) != 0)
+            if (ShouldExcludeFormat(pCodecs[i].FormatID, dwExclude))
                 continue;
-            strFilter += table[i].title;
+
+            CString extensions(pCodecs[i].FilenameExtension);
+
+            CString desc(pCodecs[i].FormatDescription);
+            strFilter += desc;
             strFilter += TEXT(" (");
-            strFilter += table[i].extensions;
+            strFilter += extensions;
             strFilter += TEXT(")");
             strFilter += chSeparator;
-            strFilter += table[i].extensions;
+            strFilter += extensions;
             strFilter += chSeparator;
 
-            aguidFileTypes.Add(*table[i].guid);
+            aguidFileTypes.Add(pCodecs[i].FormatID);
         }
 
         strFilter += chSeparator;
-
         return S_OK;
     }
 
@@ -792,11 +810,20 @@ public:
         DWORD dwExclude = excludeDefaultLoad,
         TCHAR chSeparator = TEXT('|'))
     {
-        return GetCommonFilterString(strImporters,
-                                     aguidFileTypes,
-                                     pszAllFilesDescription,
-                                     dwExclude,
-                                     chSeparator);
+        if (!InitGDIPlus())
+            return E_FAIL;
+
+        UINT cDecoders = 0;
+        Gdiplus::ImageCodecInfo* pDecoders = _getAllDecoders(cDecoders);
+        HRESULT hr = BuildCodecFilterString(pDecoders,
+                                            cDecoders,
+                                            strImporters,
+                                            aguidFileTypes,
+                                            pszAllFilesDescription,
+                                            dwExclude,
+                                            chSeparator);
+        delete[] pDecoders;
+        return hr;
     }
 
     static HRESULT GetExporterFilterString(
@@ -806,201 +833,201 @@ public:
         DWORD dwExclude = excludeDefaultSave,
         TCHAR chSeparator = TEXT('|'))
     {
-        return GetCommonFilterString(strExporters,
-                                     aguidFileTypes,
-                                     pszAllFilesDescription,
-                                     dwExclude,
-                                     chSeparator);
+        if (!InitGDIPlus())
+            return E_FAIL;
+
+        UINT cEncoders = 0;
+        Gdiplus::ImageCodecInfo* pEncoders = _getAllEncoders(cEncoders);
+        HRESULT hr = BuildCodecFilterString(pEncoders,
+                                            cEncoders,
+                                            strExporters,
+                                            aguidFileTypes,
+                                            pszAllFilesDescription,
+                                            dwExclude,
+                                            chSeparator);
+        delete[] pEncoders;
+        return hr;
     }
 
-protected:
+private:
     // an extension of BITMAPINFO
-    struct MYBITMAPINFOEX
+    struct MYBITMAPINFOEX : BITMAPINFO
     {
-        BITMAPINFOHEADER bmiHeader;
-        RGBQUAD bmiColors[256];
-        BITMAPINFO *get()
+        RGBQUAD bmiColorsExtra[256 - 1];
+    };
+
+    class CInitGDIPlus
+    {
+    private:
+        // GDI+ function types
+        using FUN_Startup = decltype(&Gdiplus::GdiplusStartup);
+        using FUN_Shutdown = decltype(&Gdiplus::GdiplusShutdown);
+        using FUN_CreateBitmapFromFile = decltype(&Gdiplus::DllExports::GdipCreateBitmapFromFile);
+        using FUN_CreateBitmapFromHBITMAP = decltype(&Gdiplus::DllExports::GdipCreateBitmapFromHBITMAP);
+        using FUN_CreateBitmapFromStream = decltype(&Gdiplus::DllExports::GdipCreateBitmapFromStream);
+        using FUN_CreateHBITMAPFromBitmap = decltype(&Gdiplus::DllExports::GdipCreateHBITMAPFromBitmap);
+        using FUN_DisposeImage = decltype(&Gdiplus::DllExports::GdipDisposeImage);
+        using FUN_GetImageDecoder = decltype(&Gdiplus::DllExports::GdipGetImageDecoders);
+        using FUN_GetImageDecoderSize = decltype(&Gdiplus::DllExports::GdipGetImageDecodersSize);
+        using FUN_GetImageEncoder = decltype(&Gdiplus::DllExports::GdipGetImageEncoders);
+        using FUN_GetImageEncoderSize = decltype(&Gdiplus::DllExports::GdipGetImageEncodersSize);
+        using FUN_SaveImageToFile = decltype(&Gdiplus::DllExports::GdipSaveImageToFile);
+        using FUN_SaveImageToStream = decltype(&Gdiplus::DllExports::GdipSaveImageToStream);
+
+        // members
+        HINSTANCE m_hInst;
+        ULONG_PTR m_dwToken;
+        CRITICAL_SECTION m_sect;
+        LONG m_nCImageObjects;
+        DWORD m_dwLastError;
+
+        void _clear_funs() noexcept
         {
-            return reinterpret_cast<BITMAPINFO *>(this);
+            Startup = NULL;
+            Shutdown = NULL;
+            CreateBitmapFromFile = NULL;
+            CreateBitmapFromHBITMAP = NULL;
+            CreateBitmapFromStream = NULL;
+            CreateHBITMAPFromBitmap = NULL;
+            DisposeImage = NULL;
+            GetImageDecoders = NULL;
+            GetImageDecodersSize = NULL;
+            GetImageEncoders = NULL;
+            GetImageEncodersSize = NULL;
+            SaveImageToFile = NULL;
+            SaveImageToStream = NULL;
         }
-        const BITMAPINFO *get() const
+
+        template <typename T_FUN>
+        T_FUN _get_fun(T_FUN& fun, LPCSTR name) noexcept
         {
-            return reinterpret_cast<const BITMAPINFO *>(this);
+            if (!fun)
+                fun = reinterpret_cast<T_FUN>(::GetProcAddress(m_hInst, name));
+            return fun;
+        }
+
+    public:
+        // GDI+ functions
+        FUN_Startup                 Startup;
+        FUN_Shutdown                Shutdown;
+        FUN_CreateBitmapFromFile    CreateBitmapFromFile;
+        FUN_CreateBitmapFromHBITMAP CreateBitmapFromHBITMAP;
+        FUN_CreateBitmapFromStream  CreateBitmapFromStream;
+        FUN_CreateHBITMAPFromBitmap CreateHBITMAPFromBitmap;
+        FUN_DisposeImage            DisposeImage;
+        FUN_GetImageDecoder         GetImageDecoders;
+        FUN_GetImageDecoderSize     GetImageDecodersSize;
+        FUN_GetImageEncoder         GetImageEncoders;
+        FUN_GetImageEncoderSize     GetImageEncodersSize;
+        FUN_SaveImageToFile         SaveImageToFile;
+        FUN_SaveImageToStream       SaveImageToStream;
+
+        CInitGDIPlus() noexcept
+            : m_hInst(NULL)
+            , m_dwToken(0)
+            , m_nCImageObjects(0)
+            , m_dwLastError(ERROR_SUCCESS)
+        {
+            _clear_funs();
+            ::InitializeCriticalSection(&m_sect);
+        }
+
+        ~CInitGDIPlus() noexcept
+        {
+            ReleaseGDIPlus();
+            ::DeleteCriticalSection(&m_sect);
+        }
+
+        bool Init() noexcept
+        {
+            ::EnterCriticalSection(&m_sect);
+
+            if (m_dwToken == 0)
+            {
+                if (!m_hInst)
+                    m_hInst = ::LoadLibrary(TEXT("gdiplus.dll"));
+
+                if (m_hInst &&
+                    _get_fun(Startup, "GdiplusStartup") &&
+                    _get_fun(Shutdown, "GdiplusShutdown") &&
+                    _get_fun(CreateBitmapFromFile, "GdipCreateBitmapFromFile") &&
+                    _get_fun(CreateBitmapFromHBITMAP, "GdipCreateBitmapFromHBITMAP") &&
+                    _get_fun(CreateBitmapFromStream, "GdipCreateBitmapFromStream") &&
+                    _get_fun(CreateHBITMAPFromBitmap, "GdipCreateHBITMAPFromBitmap") &&
+                    _get_fun(DisposeImage, "GdipDisposeImage") &&
+                    _get_fun(GetImageDecoders, "GdipGetImageDecoders") &&
+                    _get_fun(GetImageDecodersSize, "GdipGetImageDecodersSize") &&
+                    _get_fun(GetImageEncoders, "GdipGetImageEncoders") &&
+                    _get_fun(GetImageEncodersSize, "GdipGetImageEncodersSize") &&
+                    _get_fun(SaveImageToFile, "GdipSaveImageToFile") &&
+                    _get_fun(SaveImageToStream, "GdipSaveImageToStream"))
+                {
+                    using namespace Gdiplus;
+                    GdiplusStartupInput input;
+                    GdiplusStartupOutput output;
+                    Startup(&m_dwToken, &input, &output);
+                }
+            }
+
+            bool ret = (m_dwToken != 0);
+            ::LeaveCriticalSection(&m_sect);
+
+            return ret;
+        }
+
+        void ReleaseGDIPlus() noexcept
+        {
+            ::EnterCriticalSection(&m_sect);
+            if (m_dwToken)
+            {
+                if (Shutdown)
+                    Shutdown(m_dwToken);
+
+                m_dwToken = 0;
+            }
+            if (m_hInst)
+            {
+                ::FreeLibrary(m_hInst);
+                m_hInst = NULL;
+            }
+            _clear_funs();
+            ::LeaveCriticalSection(&m_sect);
+        }
+
+        void IncreaseCImageCount() noexcept
+        {
+            ::EnterCriticalSection(&m_sect);
+            ++m_nCImageObjects;
+            ::LeaveCriticalSection(&m_sect);
+        }
+
+        void DecreaseCImageCount() noexcept
+        {
+            ::EnterCriticalSection(&m_sect);
+            if (--m_nCImageObjects == 0)
+            {
+                ReleaseGDIPlus();
+            }
+            ::LeaveCriticalSection(&m_sect);
         }
     };
 
-    // abbreviations of GDI+ basic types
-    typedef Gdiplus::GpStatus St;
-    typedef Gdiplus::GpBitmap Bm;
-    typedef Gdiplus::GpImage Im;
+    static CInitGDIPlus s_gdiplus;
 
-    // The common data of atlimage
-    struct COMMON
+    static bool InitGDIPlus() noexcept
     {
-        // abbreviations of GDI+ basic types
-        typedef Gdiplus::ImageCodecInfo ICI;
-        typedef Gdiplus::EncoderParameters EncParams;
-        typedef Gdiplus::ARGB ARGB;
-        typedef HBITMAP HBM;
-        typedef Gdiplus::GdiplusStartupInput GSI;
-        typedef Gdiplus::GdiplusStartupOutput GSO;
-
-        // GDI+ function types
-#undef API
-#undef CST
-#define API WINGDIPAPI
-#define CST GDIPCONST
-        typedef St (WINAPI *STARTUP)(ULONG_PTR *, const GSI *, GSO *);
-        typedef void (WINAPI *SHUTDOWN)(ULONG_PTR);
-        typedef St (API *GETIMAGEENCODERSSIZE)(UINT *, UINT *);
-        typedef St (API *GETIMAGEENCODERS)(UINT, UINT, ICI *);
-        typedef St (API *CREATEBITMAPFROMFILE)(CST WCHAR*, Bm **);
-        typedef St (API *CREATEHBITMAPFROMBITMAP)(Bm *, HBM *, ARGB);
-        typedef St (API *CREATEBITMAPFROMSTREAM)(IStream *, Bm **);
-        typedef St (API *CREATEBITMAPFROMHBITMAP)(HBM, HPALETTE, Bm **);
-        typedef St (API *SAVEIMAGETOSTREAM)(Im *, IStream *, CST CLSID *,
-                                            CST EncParams *);
-        typedef St (API *SAVEIMAGETOFILE)(Im *, CST WCHAR *, CST CLSID *,
-                                          CST EncParams *);
-        typedef St (API *DISPOSEIMAGE)(Im*);
-#undef API
-#undef CST
-
-        // members
-        int                     count;
-        HINSTANCE               hinstGdiPlus;
-        ULONG_PTR               gdiplusToken;
-
-        // GDI+ functions
-        STARTUP                 Startup;
-        SHUTDOWN                Shutdown;
-        GETIMAGEENCODERSSIZE    GetImageEncodersSize;
-        GETIMAGEENCODERS        GetImageEncoders;
-        CREATEBITMAPFROMFILE    CreateBitmapFromFile;
-        CREATEHBITMAPFROMBITMAP CreateHBITMAPFromBitmap;
-        CREATEBITMAPFROMSTREAM  CreateBitmapFromStream;
-        CREATEBITMAPFROMHBITMAP CreateBitmapFromHBITMAP;
-        SAVEIMAGETOSTREAM       SaveImageToStream;
-        SAVEIMAGETOFILE         SaveImageToFile;
-        DISPOSEIMAGE            DisposeImage;
-
-        COMMON()
-        {
-            count = 0;
-            hinstGdiPlus = NULL;
-            Startup = NULL;
-            Shutdown = NULL;
-            GetImageEncodersSize = NULL;
-            GetImageEncoders = NULL;
-            CreateBitmapFromFile = NULL;
-            CreateHBITMAPFromBitmap = NULL;
-            CreateBitmapFromStream = NULL;
-            CreateBitmapFromHBITMAP = NULL;
-            SaveImageToStream = NULL;
-            SaveImageToFile = NULL;
-            DisposeImage = NULL;
-        }
-        ~COMMON()
-        {
-            FreeLib();
-        }
-
-        ULONG AddRef()
-        {
-            return ++count;
-        }
-        ULONG Release()
-        {
-            return --count;
-        }
-
-        // get procedure address of the DLL
-        template <typename TYPE>
-        TYPE AddrOf(const char *name)
-        {
-            FARPROC proc = ::GetProcAddress(hinstGdiPlus, name);
-            return reinterpret_cast<TYPE>(proc);
-        }
-
-        HINSTANCE LoadLib()
-        {
-            if (hinstGdiPlus)
-                return hinstGdiPlus;
-
-            hinstGdiPlus = ::LoadLibraryA("gdiplus.dll");
-
-            // get procedure addresses from the DLL
-            Startup = AddrOf<STARTUP>("GdiplusStartup");
-            Shutdown = AddrOf<SHUTDOWN>("GdiplusShutdown");
-            GetImageEncodersSize =
-                AddrOf<GETIMAGEENCODERSSIZE>("GdipGetImageEncodersSize");
-            GetImageEncoders = AddrOf<GETIMAGEENCODERS>("GdipGetImageEncoders");
-            CreateBitmapFromFile =
-                AddrOf<CREATEBITMAPFROMFILE>("GdipCreateBitmapFromFile");
-            CreateHBITMAPFromBitmap =
-                AddrOf<CREATEHBITMAPFROMBITMAP>("GdipCreateHBITMAPFromBitmap");
-            CreateBitmapFromStream =
-                AddrOf<CREATEBITMAPFROMSTREAM>("GdipCreateBitmapFromStream");
-            CreateBitmapFromHBITMAP =
-                AddrOf<CREATEBITMAPFROMHBITMAP>("GdipCreateBitmapFromHBITMAP");
-            SaveImageToStream =
-                AddrOf<SAVEIMAGETOSTREAM>("GdipSaveImageToStream");
-            SaveImageToFile = AddrOf<SAVEIMAGETOFILE>("GdipSaveImageToFile");
-            DisposeImage = AddrOf<DISPOSEIMAGE>("GdipDisposeImage");
-
-            if (hinstGdiPlus && Startup)
-            {
-                Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-                Startup(&gdiplusToken, &gdiplusStartupInput, NULL);
-            }
-
-            return hinstGdiPlus;
-        }
-        void FreeLib()
-        {
-            if (hinstGdiPlus)
-            {
-                Shutdown(gdiplusToken);
-
-                Startup = NULL;
-                Shutdown = NULL;
-                GetImageEncodersSize = NULL;
-                GetImageEncoders = NULL;
-                CreateBitmapFromFile = NULL;
-                CreateHBITMAPFromBitmap = NULL;
-                CreateBitmapFromStream = NULL;
-                CreateBitmapFromHBITMAP = NULL;
-                SaveImageToStream = NULL;
-                SaveImageToFile = NULL;
-                DisposeImage = NULL;
-                ::FreeLibrary(hinstGdiPlus);
-                hinstGdiPlus = NULL;
-            }
-        }
-    }; // struct COMMON
-
-    static COMMON*& GetCommonPtr()
-    {
-        static COMMON *s_pCommon = NULL;
-        return s_pCommon;
+        return s_gdiplus.Init();
     }
 
-    static COMMON& GetCommon()
-    {
-        COMMON*& pCommon = GetCommonPtr();
-        if (pCommon == NULL)
-            pCommon = new COMMON;
-        return *pCommon;
-    }
-
-protected:
-    HBITMAP             m_hbm;
-    mutable HGDIOBJ     m_hbmOld;
+private:
+    HBITMAP             m_hBitmap;
+    mutable HBITMAP     m_hOldBitmap;
     mutable HDC         m_hDC;
+    mutable LONG        m_nDCRefCount = 0;
     DIBOrientation      m_eOrientation;
-    bool                m_bHasAlphaCh;
-    bool                m_bIsDIBSec;
-    COLORREF            m_rgbTransColor;
+    bool                m_bHasAlphaChannel;
+    bool                m_bIsDIBSection;
+    COLORREF            m_clrTransparentColor;
     union
     {
         BITMAP          m_bm;
@@ -1024,120 +1051,110 @@ protected:
         return RGB(quad.rgbRed, quad.rgbGreen, quad.rgbBlue);
     }
 
-    struct EXTENSION_ENTRY
+    static CLSID
+    FindCodecForExtension(LPCTSTR dotext, const Gdiplus::ImageCodecInfo *pCodecs, UINT nCodecs)
     {
-        LPCWSTR pszExt;
-        GUID guid;
-    };
-
-    const GUID *FileTypeFromExtension(LPCWSTR pszExt) const
-    {
-        static const EXTENSION_ENTRY table[] =
+        for (UINT i = 0; i < nCodecs; ++i)
         {
-            {L".jpg", Gdiplus::ImageFormatJPEG},
-            {L".png", Gdiplus::ImageFormatPNG},
-            {L".bmp", Gdiplus::ImageFormatBMP},
-            {L".gif", Gdiplus::ImageFormatGIF},
-            {L".tif", Gdiplus::ImageFormatTIFF},
-            {L".jpeg", Gdiplus::ImageFormatJPEG},
-            {L".jpe", Gdiplus::ImageFormatJPEG},
-            {L".jfif", Gdiplus::ImageFormatJPEG},
-            {L".dib", Gdiplus::ImageFormatBMP},
-            {L".rle", Gdiplus::ImageFormatBMP},
-            {L".tiff", Gdiplus::ImageFormatTIFF}
-        };
-        const size_t count = _countof(table);
-        for (size_t i = 0; i < count; ++i)
-        {
-            if (::lstrcmpiW(table[i].pszExt, pszExt) == 0)
-                return &table[i].guid;
-        }
-        return NULL;
-    }
-
-    struct FORMAT_ENTRY
-    {
-        GUID guid;
-        LPCWSTR mime;
-    };
-
-    bool GetClsidFromFileType(CLSID *clsid, const GUID *guid) const
-    {
-        static const FORMAT_ENTRY table[] =
-        {
-            {Gdiplus::ImageFormatJPEG, L"image/jpeg"},
-            {Gdiplus::ImageFormatPNG, L"image/png"},
-            {Gdiplus::ImageFormatBMP, L"image/bmp"},
-            {Gdiplus::ImageFormatGIF, L"image/gif"},
-            {Gdiplus::ImageFormatTIFF, L"image/tiff"}
-        };
-        const size_t count = _countof(table);
-        for (size_t i = 0; i < count; ++i)
-        {
-            if (::IsEqualGUID(table[i].guid, *guid))
+            CString strSpecs(pCodecs[i].FilenameExtension);
+            int ichOld = 0, ichSep;
+            for (;;)
             {
-                int num = GetEncoderClsid(table[i].mime, clsid);
-                if (num >= 0)
-                {
-                    return true;
-                }
+                ichSep = strSpecs.Find(TEXT(';'), ichOld);
+
+                CString strSpec;
+                if (ichSep < 0)
+                    strSpec = strSpecs.Mid(ichOld);
+                else
+                    strSpec = strSpecs.Mid(ichOld, ichSep - ichOld);
+
+                int ichDot = strSpec.ReverseFind(TEXT('.'));
+                if (ichDot >= 0)
+                    strSpec = strSpec.Mid(ichDot);
+
+                if (!dotext || strSpec.CompareNoCase(dotext) == 0)
+                    return pCodecs[i].Clsid;
+
+                if (ichSep < 0)
+                    break;
+
+                ichOld = ichSep + 1;
             }
         }
-        return false;
+        return CLSID_NULL;
     }
 
-    int GetEncoderClsid(LPCWSTR mime, CLSID *clsid) const
+    static CLSID
+    FindCodecForFileType(REFGUID guidFileType, const Gdiplus::ImageCodecInfo *pCodecs, UINT nCodecs)
     {
-        UINT count = 0, total_size = 0;
-        GetCommon().GetImageEncodersSize(&count, &total_size);
+        for (UINT iInfo = 0; iInfo < nCodecs; ++iInfo)
+        {
+            if (::IsEqualGUID(pCodecs[iInfo].FormatID, guidFileType))
+                return pCodecs[iInfo].Clsid;
+        }
+        return CLSID_NULL;
+    }
+
+    static Gdiplus::ImageCodecInfo* _getAllEncoders(UINT& cEncoders)
+    {
+        UINT total_size = 0;
+        s_gdiplus.GetImageEncodersSize(&cEncoders, &total_size);
         if (total_size == 0)
-            return -1;  // failure
+            return NULL;  // failure
 
-        Gdiplus::ImageCodecInfo *pInfo;
-        BYTE *pb = new BYTE[total_size];
-        ATLASSERT(pb);
-        pInfo = reinterpret_cast<Gdiplus::ImageCodecInfo *>(pb);
-        if (pInfo == NULL)
-            return -1;  // failure
-
-        GetCommon().GetImageEncoders(count, total_size, pInfo);
-
-        for (UINT iInfo = 0; iInfo < count; ++iInfo)
+        Gdiplus::ImageCodecInfo *ret;
+        ret = new Gdiplus::ImageCodecInfo[total_size / sizeof(ret[0])];
+        if (ret == NULL)
         {
-            if (::lstrcmpiW(pInfo[iInfo].MimeType, mime) == 0)
-            {
-                *clsid = pInfo[iInfo].Clsid;
-                delete[] pb;
-                return iInfo;  // success
-            }
+            cEncoders = 0;
+            return NULL;  // failure
         }
 
-        delete[] pb;
-        return -1;  // failure
+        s_gdiplus.GetImageEncoders(cEncoders, total_size, ret);
+        return ret; // needs delete[]
+    }
+
+    static Gdiplus::ImageCodecInfo* _getAllDecoders(UINT& cDecoders)
+    {
+        UINT total_size = 0;
+        s_gdiplus.GetImageDecodersSize(&cDecoders, &total_size);
+        if (total_size == 0)
+            return NULL;  // failure
+
+        Gdiplus::ImageCodecInfo *ret;
+        ret = new Gdiplus::ImageCodecInfo[total_size / sizeof(ret[0])];
+        if (ret == NULL)
+        {
+            cDecoders = 0;
+            return NULL;  // failure
+        }
+
+        s_gdiplus.GetImageDecoders(cDecoders, total_size, ret);
+        return ret; // needs delete[]
     }
 
     void AttachInternal(HBITMAP hBitmap, DIBOrientation eOrientation,
-                        LONG iTransColor)
+                        LONG iTransColor) noexcept
     {
         Destroy();
 
         const int size = sizeof(DIBSECTION);
-        m_bIsDIBSec = (::GetObject(hBitmap, size, &m_ds) == size);
+        m_bIsDIBSection = (::GetObject(hBitmap, size, &m_ds) == size);
 
         bool bOK = (::GetObject(hBitmap, sizeof(BITMAP), &m_bm) != 0);
 
         if (bOK)
         {
-            m_hbm = hBitmap;
+            m_hBitmap = hBitmap;
             m_eOrientation = eOrientation;
-            m_bHasAlphaCh = (m_bm.bmBitsPixel == 32);
-            m_rgbTransColor = CLR_INVALID;
+            m_bHasAlphaChannel = (m_bm.bmBitsPixel == 32);
+            m_clrTransparentColor = CLR_INVALID;
         }
     }
 
     BOOL CreateInternal(int nWidth, int nHeight, int nBPP,
                         DWORD eCompression, const DWORD* pdwBitmasks = NULL,
-                        DWORD dwFlags = 0) throw()
+                        DWORD dwFlags = 0) noexcept
     {
         ATLASSERT(nWidth != 0);
         ATLASSERT(nHeight != 0);
@@ -1186,26 +1203,52 @@ protected:
         // create a DIB section
         HDC hDC = ::CreateCompatibleDC(NULL);
         ATLASSERT(hDC);
-        LPVOID pvBits;
-        HBITMAP hbm = ::CreateDIBSection(hDC, bi.get(), DIB_RGB_COLORS,
-                                         &pvBits, NULL, 0);
+        HBITMAP hbm = ::CreateDIBSection(hDC, &bi, DIB_RGB_COLORS, NULL, NULL, 0);
         ATLASSERT(hbm);
         ::DeleteDC(hDC);
 
         // attach it
         AttachInternal(hbm, eOrientation, -1);
-        m_bHasAlphaCh = bHasAlphaCh;
+        m_bHasAlphaChannel = bHasAlphaCh;
 
         return hbm != NULL;
     }
 
 private:
-    // NOTE: CImage is not copyable
-    CImage(const CImage&);
-    CImage& operator=(const CImage&);
+    CImage(const CImage&) = delete;
+    CImage& operator=(const CImage&) = delete;
 };
 
-}
+DECLSPEC_SELECTANY CImage::CInitGDIPlus CImage::s_gdiplus;
+
+class CImageDC
+{
+private:
+    const CImage& m_image;
+    HDC m_hDC;
+
+public:
+    CImageDC(const CImage& image)
+        : m_image(image)
+        , m_hDC(image.GetDC())
+    {
+    }
+
+    virtual ~CImageDC() noexcept
+    {
+        m_image.ReleaseDC();
+    }
+
+    operator HDC() const noexcept
+    {
+        return m_hDC;
+    }
+
+    CImageDC(const CImageDC&) = delete;
+    CImageDC& operator=(const CImageDC&) = delete;
+};
+
+} // namespace ATL
 
 #endif
 
