@@ -91,6 +91,11 @@ Period.
 
 Tested on RosBE.
 
+## Notes
+
+1. Debugging RATL on MSVC is not supported yet.
+2. `CComQIPtr<...>` is not supported. Use `CComQIIDPtr<I_ID(type)>` instead.
+
 ## License
 
 - LGPL 2.1 or later
