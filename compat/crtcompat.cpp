@@ -1,9 +1,6 @@
 #include <windows.h>
 #include <sal.h>
 
-#ifdef _MSC_VER
-_CRTIMP
-#endif
 int __cdecl _CrtDbgReportW(
     _In_ int _ReportType,
     _In_opt_z_ const wchar_t * _Filename,
