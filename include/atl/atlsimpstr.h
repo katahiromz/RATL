@@ -6,12 +6,6 @@
 #include <atlcore.h>
 #include <atlexcept.h>
 
-#ifdef __RATL__
-    #ifndef _In_count_
-        #define _In_count_(nLength)
-    #endif
-#endif
-
 namespace ATL
 {
 struct CStringData;

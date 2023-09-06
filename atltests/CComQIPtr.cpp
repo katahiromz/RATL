@@ -76,7 +76,7 @@ public:
 };
 
 // Yes this sucks, but we have to support GCC. (CORE-12710)
-#if defined(__REACTOS__) || defined(__RATL__)
+#ifdef __REACTOS__
 #define DECLARE_QIPTR(type)     CComQIIDPtr<I_ID(type)>
 #elif defined(__GNUC__)
 #define DECLARE_QIPTR(type)     CComQIIDPtr<I_ID(type)>
