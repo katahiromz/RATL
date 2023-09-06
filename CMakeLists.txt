@@ -35,7 +35,7 @@ endif()
 
 ##############################################################################
 
-add_library(crtcompat STATIC compat/crtcompat.c)
+add_library(crtcompat STATIC compat/crtcompat.cpp)
 
 ##############################################################################
 # RATL settings
