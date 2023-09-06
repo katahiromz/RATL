@@ -26,12 +26,10 @@ endif()
 # Architecture
 
 if (MSVC)
-    if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)")
-        add_definitions(-D_X86_)
-    elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "(amd64)|(AMD64)")
-        add_definitions(-D_AMD64_)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        add_definitions(-D_AMD64_ -D_M_AMD64)
     else()
-        message(FATAL_ERROR "Unsupportet platform")
+        add_definitions(-D_X86_ -D_M_IX86)
     endif()
 endif()
 
