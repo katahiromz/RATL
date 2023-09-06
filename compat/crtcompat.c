@@ -1,21 +1,13 @@
 #include <windows.h>
+#include <sal.h>
 
-int __cdecl _imp___CrtDbgReport(int reportType, const char *filename, int linenumber, const char *moduleName, const char *format, ...)
-{
-    return 0;
-}
-
-int __cdecl _imp___CrtDbgReportW(int reportType, const wchar_t *filename, int linenumber, const wchar_t *moduleName, const wchar_t *format, ...)
-{
-    return 0;
-}
-
-int __cdecl __imp___CrtDbgReport(int reportType, const char *filename, int linenumber, const char *moduleName, const char *format, ...)
-{
-    return 0;
-}
-
-int __cdecl __imp___CrtDbgReportW(int reportType, const wchar_t *filename, int linenumber, const wchar_t *moduleName, const wchar_t *format, ...)
+_CRTIMP int __cdecl _CrtDbgReportW(
+        _In_ int _ReportType,
+        _In_opt_z_ const wchar_t * _Filename,
+        _In_ int _LineNumber,
+        _In_opt_z_ const wchar_t * _ModuleName,
+        _In_opt_z_ const wchar_t * _Format,
+        ...)
 {
     return 0;
 }
