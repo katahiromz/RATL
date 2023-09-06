@@ -4,10 +4,8 @@
 // #define __ROS_LONG64__
 
 /* The user must #define STANDALONE if it uses this header in testlist.c */
-#define WIN32_NO_STATUS
+#include <windows.h>
 #include <wine/test.h>
-#undef WIN32_NO_STATUS
-
 #include <pseh/pseh2.h>
 
 /* See kmtests/include/kmt_test.h */
