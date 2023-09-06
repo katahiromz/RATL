@@ -23,8 +23,12 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
+#ifdef __RATL__
+#include <windows.h>
+#else
 #include <windef.h>
 #include <winbase.h>
+#endif
 
 #ifdef __WINE_CONFIG_H
 #error config.h should not be used in Wine tests
@@ -53,6 +57,8 @@ extern "C" {
 /* debug level */
 extern int winetest_debug;
 
+extern int report_success;
+
 /* running in interactive mode? */
 extern int winetest_interactive;
 
@@ -60,15 +66,21 @@ extern int winetest_interactive;
 extern const char *winetest_platform;
 
 extern void winetest_set_location( const char* file, int line );
+extern void winetest_subtest(const char* name);
 extern void winetest_start_todo( int is_todo );
 extern int winetest_loop_todo(void);
 extern void winetest_end_todo(void);
+extern void winetest_start_nocount(unsigned int flags);
+extern int winetest_loop_nocount(void);
+extern void winetest_end_nocount(void);
 extern int winetest_get_mainargs( char*** pargv );
 extern LONG winetest_get_failures(void);
+extern LONG winetest_get_successes(void);
 extern void winetest_add_failures( LONG new_failures );
 extern void winetest_wait_child_process( HANDLE process );
 
 extern const char *wine_dbgstr_wn( const WCHAR *str, intptr_t n );
+extern const char *wine_dbgstr_an( const CHAR *str, intptr_t n );
 extern const char *wine_dbgstr_guid( const GUID *guid );
 extern const char *wine_dbgstr_point( const POINT *guid );
 extern const char *wine_dbgstr_size( const SIZE *guid );
@@ -76,6 +88,9 @@ extern const char *wine_dbgstr_rect( const RECT *rect );
 #ifdef WINETEST_USE_DBGSTR_LONGLONG
 extern const char *wine_dbgstr_longlong( ULONGLONG ll );
 #endif
+static inline const char *debugstr_a( const char *s )  { return wine_dbgstr_an( s, -1 ); }
+static inline const char *debugstr_an( const CHAR *s, intptr_t n ) { return wine_dbgstr_an( s, n ); }
+static inline const char *wine_dbgstr_a( const char *s )  { return wine_dbgstr_an( s, -1 ); }
 static inline const char *wine_dbgstr_w( const WCHAR *s ) { return wine_dbgstr_wn( s, -1 ); }
 
 /* strcmpW is available for tests compiled under Wine, but not in standalone
@@ -121,6 +136,9 @@ extern void __winetest_cdecl winetest_ok( int condition, const char *msg, ... ) 
 extern void __winetest_cdecl winetest_skip( const char *msg, ... ) __attribute__((format (printf,1,2)));
 extern void __winetest_cdecl winetest_win_skip( const char *msg, ... ) __attribute__((format (printf,1,2)));
 extern void __winetest_cdecl winetest_trace( const char *msg, ... ) __attribute__((format (printf,1,2)));
+extern void __winetest_cdecl winetest_print(const char* msg, ...) __attribute__((format(printf, 1, 2)));
+extern void __winetest_cdecl winetest_push_context( const char *fmt, ... ) __attribute__((format(printf, 1, 2)));
+extern void winetest_pop_context(void);
 
 #else /* __GNUC__ */
 # define WINETEST_PRINTF_ATTR(fmt,args)
@@ -128,14 +146,19 @@ extern void __winetest_cdecl winetest_ok( int condition, const char *msg, ... );
 extern void __winetest_cdecl winetest_skip( const char *msg, ... );
 extern void __winetest_cdecl winetest_win_skip( const char *msg, ... );
 extern void __winetest_cdecl winetest_trace( const char *msg, ... );
+extern void __winetest_cdecl winetest_print(const char* msg, ...);
+extern void __winetest_cdecl winetest_push_context( const char *fmt, ... );
+extern void winetest_pop_context(void);
 
 #endif /* __GNUC__ */
 
+#define subtest_(file, line)  (winetest_set_location(file, line), 0) ? (void)0 : winetest_subtest
 #define ok_(file, line)       (winetest_set_location(file, line), 0) ? (void)0 : winetest_ok
 #define skip_(file, line)     (winetest_set_location(file, line), 0) ? (void)0 : winetest_skip
 #define win_skip_(file, line) (winetest_set_location(file, line), 0) ? (void)0 : winetest_win_skip
 #define trace_(file, line)    (winetest_set_location(file, line), 0) ? (void)0 : winetest_trace
 
+#define subtest  subtest_(__FILE__, __LINE__)
 #define ok       ok_(__FILE__, __LINE__)
 #define skip     skip_(__FILE__, __LINE__)
 #define win_skip win_skip_(__FILE__, __LINE__)
@@ -154,6 +177,14 @@ extern void __winetest_cdecl winetest_trace( const char *msg, ... );
 #define todo_wine               todo_if(!strcmp(winetest_platform, "wine"))
 #define todo_wine_if(is_todo)   todo_if((is_todo) && !strcmp(winetest_platform, "wine"))
 #endif
+
+#define ros_skip_flaky          for (winetest_start_nocount(3); \
+                                     winetest_loop_nocount(); \
+                                     winetest_end_nocount())
+
+#define disable_success_count   for (winetest_start_nocount(1); \
+                                     winetest_loop_nocount(); \
+                                     winetest_end_nocount())
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -241,7 +272,7 @@ int winetest_interactive = 0;
 const char *winetest_platform = "windows";
 
 /* report successful tests (BOOL) */
-static int report_success = 0;
+int report_success = 0;
 
 /* passing arguments around */
 static int winetest_argc;
@@ -261,9 +292,12 @@ typedef struct
     const char* current_file;        /* file of current check */
     int current_line;                /* line of current check */
     unsigned int todo_level;         /* current todo nesting level */
+    unsigned int nocount_level;
     int todo_do_loop;
     char *str_pos;                   /* position in debug buffer */
     char strings[2000];              /* buffer for debug strings */
+    char context[8][128];            /* data to print before messages */
+    unsigned int context_count;      /* number of context prefixes */
 } tls_data;
 static DWORD tls_index;
 
@@ -326,6 +360,39 @@ void winetest_set_location( const char* file, int line )
     data->current_line=line;
 }
 
+#ifdef __GNUC__
+static void __winetest_cdecl winetest_printf( const char *msg, ... ) __attribute__((format(printf,1,2)));
+#else
+static void __winetest_cdecl winetest_printf(const char* msg, ...);
+#endif
+static void __winetest_cdecl winetest_printf( const char *msg, ... )
+{
+    tls_data *data = get_tls_data();
+    __winetest_va_list valist;
+
+    fprintf( stdout, __winetest_file_line_prefix ": ", data->current_file, data->current_line );
+    __winetest_va_start( valist, msg );
+    vfprintf( stdout, msg, valist );
+    __winetest_va_end( valist );
+}
+
+static void __winetest_cdecl winetest_print_context( const char *msgtype )
+{
+    tls_data *data = get_tls_data();
+    unsigned int i;
+
+    winetest_printf( "%s", msgtype );
+    for (i = 0; i < data->context_count; ++i)
+        fprintf( stdout, "%s: ", data->context[i] );
+}
+
+void winetest_subtest(const char* name)
+{
+    tls_data* data = get_tls_data();
+    fprintf(stdout, __winetest_file_line_prefix ": Subtest %s\n",
+        data->current_file, data->current_line, name);
+}
+
 int broken( int condition )
 {
     return ((strcmp(winetest_platform, "windows") == 0)
@@ -353,9 +420,9 @@ int winetest_vok( int condition, const char *msg, __winetest_va_list args )
     {
         if (condition)
         {
-            fprintf( stdout, __winetest_file_line_prefix ": Test succeeded inside todo block: ",
-                     data->current_file, data->current_line );
+            winetest_print_context( "Test succeeded inside todo block: " );
             vfprintf(stdout, msg, args);
+            if ((data->nocount_level & 2) == 0)
             InterlockedIncrement(&todo_failures);
             return 0;
         }
@@ -364,10 +431,10 @@ int winetest_vok( int condition, const char *msg, __winetest_va_list args )
             /* show todos even if traces are disabled*/
             /*if (winetest_debug > 0)*/
             {
-                fprintf( stdout, __winetest_file_line_prefix ": Test marked todo: ",
-                         data->current_file, data->current_line );
+                winetest_print_context( "Test marked todo: " );
                 vfprintf(stdout, msg, args);
             }
+            if ((data->nocount_level & 1) == 0)
             InterlockedIncrement(&todo_successes);
             return 1;
         }
@@ -376,17 +443,19 @@ int winetest_vok( int condition, const char *msg, __winetest_va_list args )
     {
         if (!condition)
         {
-            fprintf( stdout, __winetest_file_line_prefix ": Test failed: ",
-                     data->current_file, data->current_line );
+            winetest_print_context( "Test failed: " );
             vfprintf(stdout, msg, args);
+            if ((data->nocount_level & 2) == 0)
             InterlockedIncrement(&failures);
             return 0;
         }
         else
         {
-            if (report_success)
-                fprintf( stdout, __winetest_file_line_prefix ": Test succeeded\n",
-                         data->current_file, data->current_line);
+            if (report_success && (data->nocount_level & 1) == 0)
+            {
+                winetest_printf("Test succeeded\n");
+            }
+            if ((data->nocount_level & 1) == 0)
             InterlockedIncrement(&successes);
             return 1;
         }
@@ -405,22 +474,30 @@ void __winetest_cdecl winetest_ok( int condition, const char *msg, ... )
 void __winetest_cdecl winetest_trace( const char *msg, ... )
 {
     __winetest_va_list valist;
-    tls_data* data=get_tls_data();
 
     if (winetest_debug > 0)
     {
-        fprintf( stdout, __winetest_file_line_prefix ": ", data->current_file, data->current_line );
+        winetest_print_context( "" );
         __winetest_va_start(valist, msg);
         vfprintf(stdout, msg, valist);
         __winetest_va_end(valist);
     }
 }
 
+void __winetest_cdecl winetest_print(const char* msg, ...)
+{
+    __winetest_va_list valist;
+    tls_data* data = get_tls_data();
+
+    fprintf(stdout, __winetest_file_line_prefix ": ", data->current_file, data->current_line);
+    __winetest_va_start(valist, msg);
+    vfprintf(stdout, msg, valist);
+    __winetest_va_end(valist);
+}
+
 void winetest_vskip( const char *msg, __winetest_va_list args )
 {
-    tls_data* data=get_tls_data();
-
-    fprintf( stdout, __winetest_file_line_prefix ": Tests skipped: ", data->current_file, data->current_line );
+    winetest_print_context( "Tests skipped: " );
     vfprintf(stdout, msg, args);
     skipped++;
 }
@@ -469,6 +546,57 @@ void winetest_end_todo(void)
     data->todo_level >>= 1;
 }
 
+void winetest_start_nocount(unsigned int flags)
+{
+    tls_data* data = get_tls_data();
+
+    /* The lowest 2 bits of nocount_level specify whether counting of successes
+       and/or failures is disabled. For each nested level the bits are shifted
+       left, the new lowest 2 bits are copied from the previous state and ored
+       with the new mask. This allows nested handling of both states up tp a
+       level of 16. */
+    flags |= data->nocount_level & 3;
+    data->nocount_level = (data->nocount_level << 2) | flags;
+    data->todo_do_loop = 1;
+}
+
+int winetest_loop_nocount(void)
+{
+    tls_data* data = get_tls_data();
+    int do_loop = data->todo_do_loop;
+    data->todo_do_loop = 0;
+    return do_loop;
+}
+
+void winetest_end_nocount(void)
+{
+    tls_data* data = get_tls_data();
+    data->nocount_level >>= 2;
+}
+
+void __winetest_cdecl winetest_push_context(const char* fmt, ...)
+{
+    tls_data* data = get_tls_data();
+    __winetest_va_list valist;
+
+    if (data->context_count < ARRAY_SIZE(data->context))
+    {
+        __winetest_va_start(valist, fmt);
+        vsnprintf(data->context[data->context_count], sizeof(data->context[data->context_count]), fmt, valist);
+        __winetest_va_end(valist);
+        data->context[data->context_count][sizeof(data->context[data->context_count]) - 1] = 0;
+    }
+    ++data->context_count;
+}
+
+void winetest_pop_context(void)
+{
+    tls_data* data = get_tls_data();
+
+    if (data->context_count)
+        --data->context_count;
+}
+
 int winetest_get_mainargs( char*** pargv )
 {
     *pargv = winetest_argv;
@@ -478,6 +606,11 @@ int winetest_get_mainargs( char*** pargv )
 LONG winetest_get_failures(void)
 {
     return failures;
+}
+
+LONG winetest_get_successes(void)
+{
+    return successes;
 }
 
 void winetest_add_failures( LONG new_failures )
@@ -512,7 +645,7 @@ void winetest_wait_child_process( HANDLE process )
     }
 }
 
-const char *wine_dbgstr_wn( const WCHAR *str, intptr_t n )
+const char *wine_dbgstr_an( const CHAR *str, intptr_t n )
 {
     char *dst, *res;
     size_t size;
@@ -526,18 +659,17 @@ const char *wine_dbgstr_wn( const WCHAR *str, intptr_t n )
     }
     if (n == -1)
     {
-        const WCHAR *end = str;
+        const CHAR *end = str;
         while (*end) end++;
         n = end - str;
     }
     if (n < 0) n = 0;
     size = 12 + min( 300, n * 5 );
     dst = res = get_temp_buffer( size );
-    *dst++ = 'L';
     *dst++ = '"';
     while (n-- > 0 && dst <= res + size - 10)
     {
-        WCHAR c = *str++;
+        CHAR c = *str++;
         switch (c)
         {
         case '\n': *dst++ = '\\'; *dst++ = 'n'; break;
@@ -565,6 +697,59 @@ const char *wine_dbgstr_wn( const WCHAR *str, intptr_t n )
     }
     *dst++ = 0;
     release_temp_buffer( res, dst - res );
+    return res;
+}
+
+const char *wine_dbgstr_wn( const WCHAR *str, intptr_t n )
+{
+    char *res;
+    static const char hex[16] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
+    char buffer[300], *dst = buffer;
+
+    if (!str) return "(null)";
+    if (!((ULONG_PTR)str >> 16))
+    {
+        res = get_temp_buffer( 6 );
+        sprintf( res, "#%04x", LOWORD(str) );
+        return res;
+    }
+    if (IsBadStringPtrW(str,n)) return "(invalid)";
+    if (n == -1) for (n = 0; str[n]; n++) ;
+    *dst++ = 'L';
+    *dst++ = '"';
+    while (n-- > 0 && dst <= buffer + sizeof(buffer) - 10)
+    {
+        WCHAR c = *str++;
+        switch (c)
+        {
+        case '\n': *dst++ = '\\'; *dst++ = 'n'; break;
+        case '\r': *dst++ = '\\'; *dst++ = 'r'; break;
+        case '\t': *dst++ = '\\'; *dst++ = 't'; break;
+        case '"':  *dst++ = '\\'; *dst++ = '"'; break;
+        case '\\': *dst++ = '\\'; *dst++ = '\\'; break;
+        default:
+            if (c < ' ' || c >= 127)
+            {
+                *dst++ = '\\';
+                *dst++ = hex[(c >> 12) & 0x0f];
+                *dst++ = hex[(c >> 8) & 0x0f];
+                *dst++ = hex[(c >> 4) & 0x0f];
+                *dst++ = hex[c & 0x0f];
+            }
+            else *dst++ = (char)c;
+        }
+    }
+    *dst++ = '"';
+    if (n > 0)
+    {
+        *dst++ = '.';
+        *dst++ = '.';
+        *dst++ = '.';
+    }
+    *dst = 0;
+
+    res = get_temp_buffer(strlen(buffer + 1));
+    strcpy(res, buffer);
     return res;
 }
 
@@ -756,47 +941,59 @@ int main( int argc, char **argv )
 
 // Some helpful definitions
 
-#define ok_hex(expression, result) \
+#define ok_hex_(file, line, expression, result) \
     do { \
         int _value = (expression); \
-        ok(_value == (result), "Wrong value for '%s', expected: " #result " (0x%x), got: 0x%x\n", \
-           #expression, (int)(result), _value); \
+        int _result = (result); \
+        ok_(file, line)(_value == _result, "Wrong value for '%s', expected: " #result " (0x%x), got: 0x%x\n", \
+           #expression, _result, _value); \
     } while (0)
+#define ok_hex(expression, result)      ok_hex_(__FILE__, __LINE__, expression, result)
 
-#define ok_dec(expression, result) \
+#define ok_dec_(file, line, expression, result) \
     do { \
         int _value = (expression); \
-        ok(_value == (result), "Wrong value for '%s', expected: " #result " (%d), got: %d\n", \
-           #expression, (int)(result), _value); \
+        int _result = (result); \
+        ok_(file, line)(_value == _result, "Wrong value for '%s', expected: " #result " (%d), got: %d\n", \
+           #expression, _result, _value); \
     } while (0)
+#define ok_dec(expression, result)      ok_dec_(__FILE__, __LINE__, expression, result)
 
-#define ok_ptr(expression, result) \
+#define ok_ptr_(file, line, expression, result) \
     do { \
         const void *_value = (expression); \
-        ok(_value == (result), "Wrong value for '%s', expected: " #result " (%p), got: %p\n", \
-           #expression, (void*)(result), _value); \
+        const void *_result = (result); \
+        ok_(file, line)(_value == _result, "Wrong value for '%s', expected: " #result " (%p), got: %p\n", \
+           #expression, _result, _value); \
     } while (0)
+#define ok_ptr(expression, result)      ok_ptr_(__FILE__, __LINE__, expression, result)
 
-#define ok_size_t(expression, result) \
+#define ok_size_t_(file, line, expression, result) \
     do { \
         size_t _value = (expression); \
-        ok(_value == (result), "Wrong value for '%s', expected: " #result " (%Ix), got: %Ix\n", \
-           #expression, (size_t)(result), _value); \
+        size_t _result = (result); \
+        ok_(file, line)(_value == _result, "Wrong value for '%s', expected: " #result " (%Ix), got: %Ix\n", \
+           #expression, _result, _value); \
     } while (0)
+#define ok_size_t(expression, result)   ok_size_t_(__FILE__, __LINE__, expression, result)
 
 #define ok_char(expression, result) ok_hex(expression, result)
 
-#define ok_err(error) \
-    ok(GetLastError() == (error), "Wrong last error. Expected " #error ", got 0x%lx\n", GetLastError())
+#define ok_err_(file, line, error) \
+    ok_(file, line)(GetLastError() == (error), "Wrong last error. Expected " #error ", got 0x%lx\n", GetLastError())
+#define ok_err(error)      ok_err_(__FILE__, __LINE__, error)
 
-#define ok_str(x, y) \
-    ok(strcmp(x, y) == 0, "Wrong string. Expected '%s', got '%s'\n", y, x)
+#define ok_str_(file, line, x, y) \
+    ok_(file, line)(strcmp(x, y) == 0, "Wrong string. Expected '%s', got '%s'\n", y, x)
+#define ok_str(x, y)      ok_str_(__FILE__, __LINE__, x, y)
 
-#define ok_wstr(x, y) \
-    ok(wcscmp(x, y) == 0, "Wrong string. Expected '%S', got '%S'\n", y, x)
+#define ok_wstr_(file, line, x, y) \
+    ok_(file, line)(wcscmp(x, y) == 0, "Wrong string. Expected '%S', got '%S'\n", y, x)
+#define ok_wstr(x, y)     ok_wstr_(__FILE__, __LINE__, x, y)
 
 #define ok_long(expression, result) ok_hex(expression, result)
 #define ok_int(expression, result) ok_dec(expression, result)
+#define ok_int_(file, line, expression, result) ok_dec_(file, line, expression, result)
 #define ok_ntstatus(status, expected) ok_hex(status, expected)
 #define ok_hdl ok_ptr
 
