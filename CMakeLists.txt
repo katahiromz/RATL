@@ -10,6 +10,9 @@ enable_testing()
 # project name and languages
 project(RATL C CXX RC)
 
+##############################################################################
+# Checking
+
 include(CheckIncludeFileCXX)
 
 # check <sal.h> existence
@@ -18,8 +21,15 @@ check_include_file_cxx(sal.h HAVE_SAL_H)
 # check <excpt.h> existence
 check_include_file_cxx(excpt.h HAVE_EXCPT_H)
 
+##############################################################################
+# Debugging
+
 if (DBG)
     add_definitions(-DDBG=1 -D_DEBUG=1)
+endif()
+
+if (DBG)
+    message(FATAL_ERROR "Sorry, RATL doesn't support debugging yet.")
 endif()
 
 ##############################################################################
@@ -41,15 +51,18 @@ add_library(crtcompat STATIC compat/crtcompat.cpp)
 # RATL settings
 
 # RATL_DEFINITIONS
-set(RATL_DEFINITIONS -DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG -DHAVE_APITEST -D_USE_PSEH3 )
+set(RATL_DEFINITIONS -DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG -DHAVE_APITEST -D_USE_PSEH3)
 set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D__RATL__ -D_CRT_NON_CONFORMING_SWPRINTFS)
 if(MSVC)
     set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D__MINGW_ATTRIB_UNUSED= -D_CRT_SECURE_NO_WARNINGS)
-    set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D_NEW -D_INC_CRTDBG)
+    set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D_NEW)
 endif()
 
 # RATL_INCLUDE_DIRS
-set(RATL_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include/atl ${CMAKE_CURRENT_SOURCE_DIR}/compat)
+set(RATL_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/atl
+    ${CMAKE_CURRENT_SOURCE_DIR}/compat)
 if(NOT(HAVE_SAL_H))
     set(RATL_INCLUDE_DIRS ${RATL_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/compat/sal)
 endif()
