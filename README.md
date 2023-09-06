@@ -89,7 +89,7 @@ target_link_libraries(... PRIVATE ${RATL_LIBRARIES})
 
 Period.
 
-Tested on RosBE, Visual Studio 2015, and Visual Studio 2019.
+Tested on RosBE.
 
 ## License
 
