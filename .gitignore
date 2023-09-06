@@ -34,3 +34,5 @@ a.*
 *.db
 .ninja*
 *.ninja
+*.db
+*.opendb
