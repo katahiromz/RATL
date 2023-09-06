@@ -28,10 +28,6 @@ if (DBG)
     add_definitions(-DDBG=1 -D_DEBUG=1)
 endif()
 
-if (DBG)
-    message(FATAL_ERROR "Sorry, RATL doesn't support debugging yet.")
-endif()
-
 ##############################################################################
 # Architecture
 
