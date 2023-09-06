@@ -21,7 +21,7 @@ This is an "Active Template Library" clone from [ReactOS](https://reactos.org/).
 
 - Copyright ReactOS Development Team
 - Copyright 2005 Jacek Caban
-- Copyright 2009 Andrew Hill <ash77@reactos.org>
+- Copyright 2009 Andrew Hill (ash77@reactos.org)
 - Copyright 2013-2023 Katayama Hirofumi MZ (katayama.hirofumi.mz@gmail.com)
 - Copyright 2015-2023 Mark Jansen (mark.jansen@reactos.org)
 - Copyright Benedikt Freisen
