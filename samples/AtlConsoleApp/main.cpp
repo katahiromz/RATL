@@ -36,5 +36,7 @@ int main(int argc, char **argv)
     array.Add(4);
     array.Add(5);
     print_array(array);
+    printf("Hit Enter key\n");
+    getchar();
     return 0;
 }
