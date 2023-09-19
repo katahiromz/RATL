@@ -46,12 +46,21 @@ public:
         return 0;
     }
 
+    BOOL OnOK()
+    {
+        // TODO: Do something
+        return TRUE;
+    }
+
     LRESULT OnCommand(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled)
     {
         switch (LOWORD(wParam))
         {
         case IDOK:
-            EndDialog(IDOK);
+            if (OnOK())
+            {
+                EndDialog(IDOK);
+            }
             break;
         case IDCANCEL:
             EndDialog(IDCANCEL);
