@@ -44,7 +44,13 @@ git submodule add https://github.com/katahiromz/RATL
 ### 2. Add subdirectory if it is CMake submodule
 
 ```txt
+# add RATL subdirectory
 add_subdirectory(RATL)
+
+# get RATL variables
+get_directory_property(RATL_DEFINITIONS DIRECTORY RATL DEFINITION RATL_DEFINITIONS)
+get_directory_property(RATL_INCLUDE_DIRS DIRECTORY RATL DEFINITION RATL_INCLUDE_DIRS)
+get_directory_property(RATL_LIBRARIES DIRECTORY RATL DEFINITION RATL_LIBRARIES)
 ```
 
 ### 3. Add definitions `${RATL_DEFINITIONS}`
