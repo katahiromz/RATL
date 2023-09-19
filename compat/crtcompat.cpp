@@ -1,10 +1,6 @@
 #include <windows.h>
 #include <sal.h>
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-    #error Sorry, debugging RATL on MSVC is not supported yet.
-#endif
-
 int __cdecl _CrtDbgReportW(
     _In_ int _ReportType,
     _In_opt_z_ const wchar_t * _Filename,

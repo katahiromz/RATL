@@ -21,12 +21,13 @@ add_executable(atl_apitest
     testlist.c
     atl_apitest.rc)
 
-message(STATUS "RATL_DEFINITIONS: ${RATL_DEFINITIONS}")
-message(STATUS "RATL_INCLUDE_DIRS: ${RATL_INCLUDE_DIRS}")
-message(STATUS "RATL_LIBRARIES: ${RATL_LIBRARIES}")
+if(MSVC)
+    set(RATLTEST_DEFINITIONS -DHAVE_APITEST -DWINETEST_USE_DBGSTR_LONGLONG)
+    set(RATLTEST_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../compat)
+endif()
 
-target_compile_definitions(atl_apitest PRIVATE ${RATL_DEFINITIONS})
-target_include_directories(atl_apitest PRIVATE ${RATL_INCLUDE_DIRS})
+target_compile_definitions(atl_apitest PRIVATE ${RATL_DEFINITIONS} ${RATLTEST_DEFINITIONS})
+target_include_directories(atl_apitest PRIVATE ${RATL_INCLUDE_DIRS} ${RATLTEST_INCLUDES})
 target_link_libraries(atl_apitest PRIVATE ${RATL_LIBRARIES})
 
 add_test(NAME atlconv COMMAND $<TARGET_FILE:atl_apitest> atlconv WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/atltests)

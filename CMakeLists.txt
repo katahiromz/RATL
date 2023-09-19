@@ -15,9 +15,6 @@ project(RATL C CXX RC)
 
 include(CheckIncludeFileCXX)
 
-# check <atl.h> existence
-check_include_file_cxx(atl.h HAVE_ATL_H)
-
 # check <sal.h> existence
 check_include_file_cxx(sal.h HAVE_SAL_H)
 
@@ -49,15 +46,18 @@ add_library(crtcompat STATIC compat/crtcompat.cpp)
 ##############################################################################
 # RATL settings
 
-if(HAVE_ATL_H)
+if(MSVC)
+    # RATL_DEFINITIONS
+    set(RATL_DEFINITIONS "")
+
+    # RATL_INCLUDE_DIRS
+    set(RATL_INCLUDE_DIRS "")
+
+    # RATL_LIBRARIES
+    set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrtd kernel32)
 else()
     # RATL_DEFINITIONS
-    set(RATL_DEFINITIONS -DINITGUID -DWINETEST_USE_DBGSTR_LONGLONG -DHAVE_APITEST -D_USE_PSEH3)
-    set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D__RATL__ -D_CRT_NON_CONFORMING_SWPRINTFS)
-    if(MSVC)
-        set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D__MINGW_ATTRIB_UNUSED= -D_CRT_SECURE_NO_WARNINGS)
-        set(RATL_DEFINITIONS ${RATL_DEFINITIONS} -D_NEW)
-    endif()
+    set(RATL_DEFINITIONS -D__RATL__ -DINITGUID -D_USE_PSEH3 -D_CRT_NON_CONFORMING_SWPRINTFS)
 
     # RATL_INCLUDE_DIRS
     set(RATL_INCLUDE_DIRS
@@ -72,14 +72,16 @@ else()
     endif()
 
     # RATL_LIBRARIES
-    if (MSVC AND DBG)
-        set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrtd kernel32)
-    else()
-        set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrt kernel32)
-    endif()
+    set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrt kernel32)
 endif()
+
+message(STATUS "RATL_DEFINITIONS: ${RATL_DEFINITIONS}")
+message(STATUS "RATL_INCLUDE_DIRS: ${RATL_INCLUDE_DIRS}")
+message(STATUS "RATL_LIBRARIES: ${RATL_LIBRARIES}")
 
 ##############################################################################
 
-add_subdirectory(atltests)
+if(NOT(MSVC))
+    add_subdirectory(atltests)
+endif()
 add_subdirectory(samples)
