@@ -1,8 +1,6 @@
 # ![](img/RATL-32x32.png) Independent ReactOS ATL (RATL)
 
-This is an "Active Template Library" clone from [ReactOS](https://reactos.org/).
-
-(Under construction)
+This is an "Active Template Library (ATL)" clone from [ReactOS](https://reactos.org/).
 
 <p align=center>
   <a href="https://reactos.org/">
@@ -84,6 +82,7 @@ target_link_libraries(... PRIVATE ${RATL_LIBRARIES})
 ```c
 #include <atlbase.h>
 #include <atlstr.h>
+#include <atlwin.h>
 ...
 ```
 
@@ -91,7 +90,7 @@ target_link_libraries(... PRIVATE ${RATL_LIBRARIES})
 
 Period.
 
-Tested on RosBE.
+Tested on RosBE (ReactOS Build Environment) and Visual Studio 2019.
 
 ## Notes
 
