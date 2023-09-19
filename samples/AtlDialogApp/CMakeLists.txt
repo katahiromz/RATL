@@ -10,6 +10,9 @@ project(AtlDialogApp C CXX RC)
 
 # Read RATL if any
 #add_subdirectory(RATL)
+#get_directory_property(RATL_DEFINITIONS DIRECTORY RATL DEFINITION RATL_DEFINITIONS)
+#get_directory_property(RATL_INCLUDE_DIRS DIRECTORY RATL DEFINITION RATL_INCLUDE_DIRS)
+#get_directory_property(RATL_LIBRARIES DIRECTORY RATL DEFINITION RATL_LIBRARIES)
 
 # AtlDialogApp.exe
 add_executable(AtlDialogApp WIN32 main.cpp main_res.rc)
