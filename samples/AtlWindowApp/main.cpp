@@ -157,8 +157,6 @@ BOOL CMainWindow::LoadSettings()
     error = appKey.QueryValue(TEXT("x"), NULL, &dwValue, &cbValue);
     if (!error)
         m_x = dwValue;
-    else
-        ::MessageBoxA(NULL, "OK", NULL, NULL);
 
     cbValue = sizeof(dwValue);
     error = appKey.QueryValue(TEXT("y"), NULL, &dwValue, &cbValue);
