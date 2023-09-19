@@ -37,6 +37,12 @@ public:
 
     LRESULT OnInitDialog(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled)
     {
+        HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_MAINICON));
+        HICON hIconSm = (HICON)LoadImage(
+            GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_MAINICON), IMAGE_ICON,
+            GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0);
+        SendMessage(WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(WM_SETICON, ICON_SMALL, (LPARAM)hIconSm);
         return 0;
     }
 
