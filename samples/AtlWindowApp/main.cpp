@@ -6,6 +6,8 @@
 #include <atlcom.h>
 #include <atlwin.h>
 
+#include "resource.h"
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 class CMyExeModule : public ATL::CAtlExeModuleT<CMyExeModule>
@@ -17,22 +19,48 @@ CMyExeModule g_my_exe;
 
 class CMainWindow : public CWindowImpl<CMainWindow, CWindow, CFrameWinTraits>
 {
+protected:
+    INT m_x = CW_USEDEFAULT;
+    INT m_y = CW_USEDEFAULT;
+    INT m_cx = 600;
+    INT m_cy = 400;
+
 public:
-    DECLARE_WND_CLASS_EX(TEXT("AtlWindowApp"), CS_HREDRAW | CS_VREDRAW, COLOR_3DFACE)
+    static ATL::CWndClassInfo& GetWndClassInfo()
+    {
+        DWORD style = CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS;
+        static ATL::CWndClassInfo wc =
+        {
+            {
+                sizeof(WNDCLASSEX), style, StartWindowProc, 0, 0, NULL,
+                LoadIcon(_AtlBaseModule.GetModuleInstance(), MAKEINTRESOURCE(IDI_MAINICON)),
+                LoadCursor(NULL, IDC_ARROW),
+                (HBRUSH)(COLOR_3DFACE + 1),
+                NULL, TEXT("AtlWindowApp"), NULL
+            },
+            NULL, NULL, IDC_ARROW, TRUE, 0, TEXT("")
+        };
+        return wc;
+    }
 
     CMainWindow();
     virtual ~CMainWindow();
 
     HWND Create(HWND hwndParent = NULL)
     {
-        RECT r = { 50, 50, 600, 400 };
+        RECT rc = { m_x, m_y, m_x + m_cx, m_y + m_cy };
         DWORD style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
         DWORD exstyle = WS_EX_WINDOWEDGE;
-        return CWindowImpl::Create(hwndParent, r, TEXT("AtlWindowApp"), style, exstyle);
+        return CWindowImpl::Create(hwndParent, rc, TEXT("AtlWindowApp"), style, exstyle);
     }
+
+    VOID ResetSettings();
+    BOOL LoadSettings();
+    BOOL SaveSettings();
 
     BEGIN_MSG_MAP(CMainWindow)
         MESSAGE_HANDLER(WM_CREATE, OnCreate)
+        MESSAGE_HANDLER(WM_MOVE, OnMove)
         MESSAGE_HANDLER(WM_SIZE, OnSize)
         MESSAGE_HANDLER(WM_PAINT, OnPaint)
         MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
@@ -49,8 +77,27 @@ public:
         return 0;
     }
 
+    LRESULT OnMove(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled)
+    {
+        if (!m_hWnd || IsIconic() || IsZoomed())
+            return 0;
+
+        RECT rc;
+        GetWindowRect(&rc);
+        m_x = rc.left;
+        m_y = rc.top;
+        return 0;
+    }
+
     LRESULT OnSize(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled)
     {
+        if (!m_hWnd || IsIconic() || IsZoomed())
+            return 0;
+
+        RECT rc;
+        GetWindowRect(&rc);
+        m_cx = rc.right - rc.left;
+        m_cy = rc.bottom - rc.top;
         return 0;
     }
 
@@ -85,6 +132,77 @@ CMainWindow::~CMainWindow()
 {
 }
 
+VOID CMainWindow::ResetSettings()
+{
+    m_x = CW_USEDEFAULT;
+    m_y = CW_USEDEFAULT;
+    m_cx = 600;
+    m_cy = 400;
+}
+
+BOOL CMainWindow::LoadSettings()
+{
+    ResetSettings();
+
+    CRegKey appKey;
+    LONG error;
+
+    error = appKey.Open(HKEY_CURRENT_USER, TEXT("Software\\ReactOS\\AtlWindowApp"));
+    if (error)
+        return FALSE;
+
+    DWORD dwValue, cbValue;
+
+    cbValue = sizeof(dwValue);
+    error = appKey.QueryValue(TEXT("x"), NULL, &dwValue, &cbValue);
+    if (!error)
+        m_x = dwValue;
+    else
+        ::MessageBoxA(NULL, "OK", NULL, NULL);
+
+    cbValue = sizeof(dwValue);
+    error = appKey.QueryValue(TEXT("y"), NULL, &dwValue, &cbValue);
+    if (!error)
+        m_y = dwValue;
+
+    cbValue = sizeof(dwValue);
+    error = appKey.QueryValue(TEXT("cx"), NULL, &dwValue, &cbValue);
+    if (!error)
+        m_cx = dwValue;
+
+    cbValue = sizeof(dwValue);
+    error = appKey.QueryValue(TEXT("cy"), NULL, &dwValue, &cbValue);
+    if (!error)
+        m_cy = dwValue;
+
+    // TODO: Load settings
+
+    return TRUE;
+}
+
+BOOL CMainWindow::SaveSettings()
+{
+    CRegKey companyKey, appKey;
+    LONG error;
+
+    error = companyKey.Create(HKEY_CURRENT_USER, TEXT("Software\\ReactOS"));
+    if (error)
+        return FALSE;
+
+    error = appKey.Create(companyKey, TEXT("AtlWindowApp"));
+    if (error)
+        return FALSE;
+
+    appKey.SetDWORDValue(TEXT("x"), m_x);
+    appKey.SetDWORDValue(TEXT("y"), m_y);
+    appKey.SetDWORDValue(TEXT("cx"), m_cx);
+    appKey.SetDWORDValue(TEXT("cy"), m_cy);
+
+    // TODO: Save settings
+
+    return TRUE;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 INT WINAPI
@@ -96,6 +214,8 @@ WinMain(HINSTANCE   hInstance,
     InitCommonControls();
 
     CMainWindow mainWnd;
+    mainWnd.LoadSettings();
+
     HWND hMainWnd = mainWnd.Create();
     if (!hMainWnd)
         return 1;
@@ -109,6 +229,8 @@ WinMain(HINSTANCE   hInstance,
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    mainWnd.SaveSettings();
 
     return (INT)msg.wParam;
 }
