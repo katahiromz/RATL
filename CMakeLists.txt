@@ -82,6 +82,7 @@ message(STATUS "RATL_LIBRARIES: ${RATL_LIBRARIES}")
 ##############################################################################
 
 if(NOT(MSVC))
+    # FIXME: ok macro is duplicated
     add_subdirectory(atltests)
 endif()
 add_subdirectory(samples)
