@@ -100,8 +100,7 @@ Tested on RosBE (ReactOS Build Environment) and Visual Studio 2019.
 
 ## Notes
 
-1. Debugging RATL on MSVC is not supported yet; due to the difference of `_CrtDbgReportW`.
-2. `CComQIPtr<type>` is not supported due to GCC compatibility. Use `CComQIIDPtr<I_ID(type)>` instead.
+- `CComQIPtr<type>` is not supported due to GCC compatibility. Use `CComQIIDPtr<I_ID(type)>` instead.
 
 ## License
 
