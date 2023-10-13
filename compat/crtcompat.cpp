@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <sal.h>
 
+extern "C"
 int __cdecl _CrtDbgReportW(
     _In_ int _ReportType,
     _In_opt_z_ const wchar_t * _Filename,

@@ -22,13 +22,6 @@ check_include_file_cxx(sal.h HAVE_SAL_H)
 check_include_file_cxx(excpt.h HAVE_EXCPT_H)
 
 ##############################################################################
-# Debugging
-
-if (DBG)
-    add_definitions(-DDBG=1 -D_DEBUG=1)
-endif()
-
-##############################################################################
 # Architecture
 
 if (MSVC)
@@ -54,7 +47,7 @@ if(MSVC)
     set(RATL_INCLUDE_DIRS "")
 
     # RATL_LIBRARIES
-    set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrtd kernel32)
+    set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrtd vcruntimed ucrtd kernel32)
 else()
     # RATL_DEFINITIONS
     set(RATL_DEFINITIONS -D__RATL__ -DINITGUID -D_USE_PSEH3 -D_CRT_NON_CONFORMING_SWPRINTFS)
