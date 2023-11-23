@@ -7,4 +7,3 @@ cp -r ../reactos/modules/rostests/apitests/atl/*.h atltests
 cp -r ../reactos/modules/rostests/apitests/atl/*.rc atltests
 cp -r ../reactos/modules/rostests/apitests/atl/devenv/*.sln atltests/devenv
 cp -r ../reactos/modules/rostests/apitests/atl/devenv/*.vcxproj atltests/devenv
-cp -r ../reactos/sdk/include/reactos/wine/test.h include/wine/
