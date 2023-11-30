@@ -2,11 +2,17 @@
 # CMake minimum version
 cmake_minimum_required(VERSION 3.5)
 
+# Set policy
+cmake_policy(SET CMP0079 NEW)
+
 # enable testing
 enable_testing()
 
 # project name and languages
 project(AtlConsoleApp C CXX RC)
+
+# Build RATL samples?
+set(RATL_BUILD_SAMPLES OFF)
 
 # Read RATL if any
 #add_subdirectory(RATL)
