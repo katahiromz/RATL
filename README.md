@@ -29,6 +29,18 @@ This is an "Active Template Library (ATL)" clone from [ReactOS](https://reactos.
 
 ## How to use RATL in your project
 
+1. `git submodule add https://github.com/katahiromz/RATL`
+2. Add the following code into your `CMakeLists.txt`:
+
+```txt
+add_subdirectory(RATL)
+get_directory_property(RATL_DEFINITIONS DIRECTORY RATL DEFINITION RATL_DEFINITIONS)
+get_directory_property(RATL_INCLUDE_DIRS DIRECTORY RATL DEFINITION RATL_INCLUDE_DIRS)
+get_directory_property(RATL_LIBRARIES DIRECTORY RATL DEFINITION RATL_LIBRARIES)
+```
+
+3. Use `RATL_DEFINITIONS`, `RATL_INCLUDE_DIRS`, and `RATL_LIBRARIES` in your `CMakeLists.txt`.
+
 See samples/.
 
 Tested on RosBE (ReactOS Build Environment) and Visual Studio 2019.
