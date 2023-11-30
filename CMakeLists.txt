@@ -35,7 +35,7 @@ endif()
 ##############################################################################
 # RATL options
 
-option(RATL_BUILD_SAMPLES "Build RATL samples" ON)
+option(RATL_BUILD_TESTS "Make RATL tests" OFF)
 
 ##############################################################################
 # RATL settings
@@ -69,7 +69,6 @@ else()
     set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrt kernel32)
 endif()
 
-message(STATUS "RATL_BUILD_SAMPLES: ${RATL_BUILD_SAMPLES}")
 message(STATUS "RATL_DEFINITIONS: ${RATL_DEFINITIONS}")
 message(STATUS "RATL_INCLUDE_DIRS: ${RATL_INCLUDE_DIRS}")
 message(STATUS "RATL_LIBRARIES: ${RATL_LIBRARIES}")
@@ -78,11 +77,7 @@ message(STATUS "RATL_LIBRARIES: ${RATL_LIBRARIES}")
 
 add_library(crtcompat STATIC compat/crtcompat.cpp)
 
-if(NOT(MSVC))
+if(NOT(MSVC) AND RATL_BUILD_TESTS)
     # FIXME: ok macro is duplicated
     add_subdirectory(atltests)
-endif()
-
-if(RATL_BUILD_SAMPLES)
-    add_subdirectory(samples)
 endif()

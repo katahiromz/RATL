@@ -1,4 +1,0 @@
-
-add_subdirectory(AtlConsoleApp)
-add_subdirectory(AtlDialogApp)
-add_subdirectory(AtlWindowApp)
