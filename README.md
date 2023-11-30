@@ -27,74 +27,9 @@ This is an "Active Template Library (ATL)" clone from [ReactOS](https://reactos.
 - Copyright Benedikt Freisen
 - And more!
 
-## How to use RATL
+## How to use RATL in your project
 
-### 1. Clone RATL
-
-```txt
-git clone https://github.com/katahiromz/RATL
-```
-
-Or:
-
-```txt
-git submodule add https://github.com/katahiromz/RATL
-```
-
-### 2. Add subdirectory if it is CMake submodule
-
-```txt
-# add RATL subdirectory
-add_subdirectory(RATL)
-
-# get RATL variables
-get_directory_property(RATL_DEFINITIONS DIRECTORY RATL DEFINITION RATL_DEFINITIONS)
-get_directory_property(RATL_INCLUDE_DIRS DIRECTORY RATL DEFINITION RATL_INCLUDE_DIRS)
-get_directory_property(RATL_LIBRARIES DIRECTORY RATL DEFINITION RATL_LIBRARIES)
-```
-
-### 3. Add definitions `${RATL_DEFINITIONS}`
-
-```txt
-add_definitions(${RATL_DEFINITIONS})
-```
-
-Or:
-
-```txt
-target_compile_definitions(... PRIVATE ${RATL_DEFINITIONS})
-```
-
-### 4. Add include directories `${RATL_INCLUDE_DIRS}`
-
-```txt
-include_directories(${RATL_INCLUDE_DIRS})
-```
-
-Or:
-
-```txt
-target_include_directories(... PRIVATE ${RATL_INCLUDE_DIRS})
-```
-
-### 5. Link `${RATL_LIBRARIES}`
-
-```txt
-target_link_libraries(... PRIVATE ${RATL_LIBRARIES})
-```
-
-### 6. Include RATL's headers
-
-```c
-#include <atlbase.h>
-#include <atlstr.h>
-#include <atlwin.h>
-...
-```
-
-### 7. Enjoy RATL programming
-
-Period.
+See samples/.
 
 Tested on RosBE (ReactOS Build Environment) and Visual Studio 2019.
 
