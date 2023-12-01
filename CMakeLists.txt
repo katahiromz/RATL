@@ -48,7 +48,7 @@ if(MSVC)
     set(RATL_INCLUDE_DIRS "")
 
     # RATL_LIBRARIES
-    set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrtd vcruntimed ucrtd kernel32)
+    set(RATL_LIBRARIES uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrtd vcruntimed ucrtd kernel32)
 else()
     # RATL_DEFINITIONS
     set(RATL_DEFINITIONS -D__RATL__ -DINITGUID -D_USE_PSEH3 -D_CRT_NON_CONFORMING_SWPRINTFS)
@@ -66,7 +66,7 @@ else()
     endif()
 
     # RATL_LIBRARIES
-    set(RATL_LIBRARIES crtcompat uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrt kernel32)
+    set(RATL_LIBRARIES uuid rpcrt4 ole32 shlwapi oleaut32 msimg32 gdiplus gdi32 advapi32 user32 msvcrt kernel32)
 endif()
 
 message(STATUS "RATL_DEFINITIONS: ${RATL_DEFINITIONS}")
@@ -74,8 +74,6 @@ message(STATUS "RATL_INCLUDE_DIRS: ${RATL_INCLUDE_DIRS}")
 message(STATUS "RATL_LIBRARIES: ${RATL_LIBRARIES}")
 
 ##############################################################################
-
-add_library(crtcompat STATIC compat/crtcompat.cpp)
 
 if(NOT(MSVC) AND RATL_BUILD_TESTS)
     # FIXME: ok macro is duplicated
